@@ -58,6 +58,10 @@ test('duplicate ports display red collision states while still exporting',async(
   doc.querySelector('[data-duplicate="0"]').click();
   await waitFor(()=>doc.querySelector('#compute-state').textContent==='Interference');
   assert.equal(doc.querySelectorAll('.port-card.colliding').length,2);
+  assert.equal(doc.querySelectorAll('.collision-item').length,1);
+  assert.match(doc.querySelector('.collision-item').textContent,/Coincident axes/);
+  assert.match(doc.querySelector('.collision-item').textContent,/tube \/ tube/);
+  assert.deepEqual([...doc.querySelectorAll('.port-card.colliding .port-state')].map(el=>el.textContent),['Collision + coincident','Collision + coincident']);
   assert.equal(doc.querySelector('#export').disabled,false);
   doc.querySelector('#export').click();
   await waitFor(()=>doc.body.dataset.download==='Chamber.py');
@@ -73,5 +77,36 @@ test('switching to ISO-F hides CF styles and produces a valid standard profile',
   change('[data-path="ports.0.flange"]','ISO63F');
   await waitFor(()=>doc.querySelector('#compute-state').textContent==='Up to date');
   assert.equal(doc.querySelector('[data-path="ports.0.style"]'),null);
+  assert.equal(doc.querySelector('#export').disabled,false);
+});
+
+test('nested ports with coincident axes warn without solid overlap, can be located, and clear after moving',async()=>{
+  doc.querySelector('[data-unit="mm"]').click();
+  change('[data-path="ports.0.flange"]','CF100');
+  change('[data-path="ports.1.flange"]','CF16');
+  for(const i of [0,1])for(const [field,value] of Object.entries({elevation:254,focalLength:240,alpha:0,beta:90}))change(`[data-path="ports.${i}.${field}"]`,value);
+  await waitFor(()=>doc.querySelector('#compute-state').textContent==='Coincident ports');
+  const response=await loopbackFetch('/api/evaluate',{method:'POST',headers:{'Content-Type':'application/json'},body:localStorage.getItem('chamber-studio-v1')});
+  const result=await response.json();
+  assert.deepEqual(result.collisions,[],'The nested-port fixture must have no solid overlap');
+  assert.deepEqual(result.coincidences.map(c=>c.ports),[['A','B']]);
+  assert.equal(result.metrics.coincidenceCount,1);
+  assert.equal(doc.querySelector('#collision-summary').className,'danger');
+  assert.match(doc.querySelector('#collision-summary').textContent,/1 coincident port pair/);
+  assert.equal(doc.querySelectorAll('.collision-item').length,1);
+  assert.match(doc.querySelector('.collision-item').textContent,/Coincident axes \(same position and direction\)/);
+  assert.deepEqual([...doc.querySelectorAll('.port-state')].map(el=>el.textContent),['Coincident','Coincident']);
+  assert.equal(doc.querySelectorAll('.port-card.colliding').length,2);
+  assert.equal(doc.querySelector('#export').disabled,false);
+  doc.querySelector('.collision-item [data-focus]').click();
+  assert.equal(doc.querySelectorAll('.port-card.part-highlight').length,2);
+
+  change('[data-path="ports.1.alpha"]',180);
+  await waitFor(()=>doc.querySelector('#compute-state').textContent==='Up to date');
+  assert.match(doc.querySelector('#collision-summary').textContent,/No port collisions detected/);
+  assert.equal(doc.querySelector('#collision-summary').className,'');
+  assert.equal(doc.querySelectorAll('.collision-item').length,0);
+  assert.equal(doc.querySelectorAll('.port-card.colliding').length,0);
+  assert.deepEqual([...doc.querySelectorAll('.port-state')].map(el=>el.textContent),['Clear','Clear']);
   assert.equal(doc.querySelector('#export').disabled,false);
 });

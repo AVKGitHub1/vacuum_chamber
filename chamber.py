@@ -18,6 +18,8 @@ import numpy as np
 SEGMENTS = 128
 HOLE_SEGMENTS = 32
 VOLUME_EPSILON = 1e-5  # mm³; touching faces have no interference volume.
+COINCIDENT_POSITION_EPSILON = 1e-5  # mm; numerical tolerance, not a clearance.
+COINCIDENT_DIRECTION_EPSILON = 1e-8  # Difference between unit direction vectors.
 CF_STYLES = {"fixed-through", "fixed-tapped", "rotatable-through", "rotatable-tapped"}
 END_TYPES = {"CF FXD", "ISO-F"}
 
@@ -49,6 +51,17 @@ def resolve_config(config: dict, catalog: Any) -> dict:
 def port_direction(port: dict) -> np.ndarray:
     alpha, beta = math.radians(port["alpha"]), math.radians(port["beta"])
     return np.array([math.sin(beta) * math.cos(alpha), math.sin(beta) * math.sin(alpha), math.cos(beta)])
+
+
+def ports_coincide(first: dict, second: dict) -> bool:
+    """Check the same outward axis, independent of flange size or focal length.
+
+    Port axes originate on the chamber's Z axis. Valid beta values keep them
+    nonvertical, so equal elevation and direction identify the same outward ray.
+    Comparing vectors also treats alpha=0 and alpha=360 as the same direction.
+    """
+    return (abs(first["elevation"] - second["elevation"]) <= COINCIDENT_POSITION_EPSILON
+            and np.linalg.norm(port_direction(first) - port_direction(second)) <= COINCIDENT_DIRECTION_EPSILON)
 
 
 def validate_config(config: dict, catalog: Any) -> dict:
@@ -304,9 +317,9 @@ def _mesh(shape: mf.Manifold, identity: str, name: str, kind: str, port_id=None)
 
 
 def evaluate(config: dict, catalog: Any, include_mesh: bool = True) -> dict:
-    """Return validated geometry, actual solid intersections, and preview meshes."""
+    """Return geometry, solid intersections, coincident port axes, and meshes."""
     validation = validate_config(config, catalog)
-    result = {"errors": validation["errors"], "warnings": validation["warnings"], "collisions": [],
+    result = {"errors": validation["errors"], "warnings": validation["warnings"], "collisions": [], "coincidences": [],
               "meshes": [], "metrics": {}, "resolvedConfig": validation["config"]}
     resolved = validation["config"]
     if any(not e["path"].startswith("ports.") for e in result["errors"]):
@@ -357,9 +370,16 @@ def evaluate(config: dict, catalog: Any, include_mesh: bool = True) -> dict:
             flange = flange.rotate([180, 0, 0]).translate([0, 0, low])
         parts.append(("chamber-" + side, side.title() + " end flange", "end", None, flange))
 
-    collision_ids = set()
+    collision_ids, coincident_ports = set(), set()
     for index, (first_port, first_parts) in enumerate(ports):
         for second_port, second_parts in ports[index + 1:]:
+            if ports_coincide(first_port, second_port):
+                pair = [first_port["id"], second_port["id"]]
+                result["coincidences"].append({"ports": pair})
+                coincident_ports.update(pair)
+                result["warnings"].append(
+                    f"Ports {pair[0]} and {pair[1]} have coincident axes: they share the same position and direction, "
+                    "even if their hollow solids do not overlap. Change a port's elevation, alpha, or beta to separate them. Export remains available.")
             for first_kind, first_solid in first_parts.items():
                 for second_kind, second_solid in second_parts.items():
                     volume, point = solid_intersection(first_solid, second_solid)
@@ -370,13 +390,15 @@ def evaluate(config: dict, catalog: Any, include_mesh: bool = True) -> dict:
                         collision_ids.add(f"port-{second_port['id']}-{second_kind}")
     if result["collisions"]:
         pairs = {tuple(c["ports"]) for c in result["collisions"]}
-        result["warnings"].append(f"Port interference detected between {len(pairs)} pair(s). Red parts overlap. Export remains available.")
+        result["warnings"].append(f"Port interference detected between {len(pairs)} pair(s). Overlapping parts are red. Export remains available.")
     if include_mesh:
         for identity, name, kind, port_id, solid in parts:
             mesh = _mesh(solid, identity, name, kind, port_id)
             mesh["collision"] = identity in collision_ids
+            mesh["coincident"] = port_id in coincident_ports
             result["meshes"].append(mesh)
     result["metrics"] = {"portCount": len(ports), "collisionCount": len(result["collisions"]),
+                         "coincidenceCount": len(result["coincidences"]),
                          "bodyOD": body["od"], "height": body["height"], "innerDiameter": inner_radius * 2,
                          "materialVolume": sum(s.volume() for *_, s in parts), "meshSegments": SEGMENTS,
                          "collisionToleranceVolume": VOLUME_EPSILON,

@@ -5,4 +5,8 @@ __pycache__/
 *.pyc
 node_modules/
 .npm-cache/
-.npm-cache/
+dist/
+.build-cache/
+test-results/
+playwright-report/
+.playwright-browsers/

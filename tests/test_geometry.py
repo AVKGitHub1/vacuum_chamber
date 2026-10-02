@@ -42,11 +42,13 @@ class ChamberTests(unittest.TestCase):
         result = evaluate(configuration(), CATALOG)
         self.assertEqual(result["errors"], [])
         self.assertEqual(result["collisions"], [])
+        self.assertEqual(result["coincidences"], [])
         self.assertEqual(len(result["meshes"]), 5)
         for mesh in result["meshes"]:
             self.assertTrue(mesh["indices"])
             self.assertTrue(all(math.isfinite(x) for x in mesh["positions"]))
             self.assertFalse(mesh["collision"])
+            self.assertFalse(mesh["coincident"])
 
     def test_identical_ports_collide_and_only_port_parts_turn_red(self):
         config = configuration()
@@ -56,6 +58,32 @@ class ChamberTests(unittest.TestCase):
         self.assertTrue(any(c["parts"] == ["tube", "tube"] for c in result["collisions"]))
         self.assertTrue(any(c["parts"] == ["flange", "flange"] for c in result["collisions"]))
         self.assertTrue(all(m["collision"] == (m["portId"] is not None) for m in result["meshes"]))
+        self.assertEqual(result["coincidences"], [{"ports": ["A", "B"]}])
+        self.assertEqual(result["metrics"]["coincidenceCount"], 1)
+        self.assertTrue(all(m["coincident"] == (m["portId"] is not None) for m in result["meshes"]))
+
+    def test_coincident_axes_include_wrapped_angles_and_tilted_ports_with_unequal_lengths(self):
+        for first, second in [
+            (port("A", alpha=0), port("B", alpha=360, length=300)),
+            (port("A", alpha=45, beta=80, length=300), port("B", alpha=45, beta=80, length=330)),
+        ]:
+            with self.subTest(first=first, second=second):
+                config = configuration()
+                config["ports"] = [first, second]
+                result = evaluate(config, CATALOG, include_mesh=False)
+                self.assertEqual(result["errors"], [])
+                self.assertEqual(result["coincidences"], [{"ports": ["A", "B"]}])
+                self.assertEqual(result["metrics"]["coincidenceCount"], 1)
+
+    def test_nearby_axes_with_distinct_placement_are_not_coincident(self):
+        for change in [{"elevation": 254.001}, {"alpha": 0.001}, {"beta": 90.001}]:
+            with self.subTest(change=change):
+                config = configuration()
+                config["ports"].append({**port("B"), **change})
+                result = evaluate(config, CATALOG, include_mesh=False)
+                self.assertEqual(result["errors"], [])
+                self.assertTrue(result["collisions"])
+                self.assertEqual(result["coincidences"], [])
 
     def test_opposite_ports_do_not_collide_through_chamber_cavity(self):
         config = configuration()
@@ -63,6 +91,7 @@ class ChamberTests(unittest.TestCase):
         result = evaluate(config, CATALOG, include_mesh=False)
         self.assertEqual(result["errors"], [])
         self.assertEqual(result["collisions"], [])
+        self.assertEqual(result["coincidences"], [])
 
     def test_disjoint_ports_at_different_elevations_do_not_collide(self):
         config = configuration()
@@ -70,6 +99,7 @@ class ChamberTests(unittest.TestCase):
         result = evaluate(config, CATALOG, include_mesh=False)
         self.assertEqual(result["errors"], [])
         self.assertEqual(result["collisions"], [])
+        self.assertEqual(result["coincidences"], [])
 
     def test_converging_tilted_tubes_detect_interference(self):
         config = configuration()
@@ -108,6 +138,8 @@ class ChamberTests(unittest.TestCase):
         result = evaluate(config, CATALOG)
         self.assertTrue(any(e["path"] == "ports.1.beta" for e in result["errors"]))
         self.assertEqual(result["metrics"]["portCount"], 1)
+        self.assertEqual(result["coincidences"], [])
+        self.assertTrue(all(not mesh["coincident"] for mesh in result["meshes"]))
 
     def test_invalid_wall_returns_errors_before_boolean(self):
         config = configuration()

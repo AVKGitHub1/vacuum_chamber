@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="chamber-runtime" content="server">
   <meta name="theme-color" content="#172c36">
   <title>Chamber Studio · Vacuum chamber builder</title>
-  <link rel="stylesheet" href="/style.css">
-  <script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
 </head>
 <body>
   <header class="app-header">
     <div class="brand"><span class="brand-mark" aria-hidden="true">◉</span><div>CHAMBER <strong>STUDIO</strong><small>VACUUM CHAMBER CONFIGURATOR</small></div></div>
-    <div class="header-actions"><span class="local-badge"><i></i> Local workspace</span><button id="save" class="quiet">Save</button><label class="button quiet" for="open-file">Open<input type="file" id="open-file" accept=".json,application/json" hidden></label><button id="export" class="primary" disabled>↓ Export Fusion Python</button></div>
+    <div class="header-actions"><span class="local-badge"><i></i> <span id="workspace-label">Local workspace</span></span><button id="save" class="quiet">Save</button><label class="button quiet" for="open-file">Open<input type="file" id="open-file" accept=".json,application/json" hidden></label><button id="export" class="primary" disabled>↓ Export Fusion Python</button></div>
   </header>
   <main>
     <section class="editor">
@@ -23,11 +24,11 @@
     <section class="preview-panel" aria-label="Interactive chamber preview">
       <div class="preview-header"><div><div class="eyebrow">LIVE GEOMETRY</div><h2>Assembly preview</h2></div><span id="compute-state" class="status-chip">Starting…</span></div>
       <div id="viewport"><div id="webgl-error" hidden></div><div id="port-labels"></div><div class="view-toolbar"><button id="fit" title="Fit chamber to view">Fit</button><button id="view-top">Top</button><button id="view-front">Front</button><button id="view-iso" class="active">3D</button><label><input type="checkbox" id="transparent"> X-ray</label></div><div class="viewport-caption">DRAG TO ORBIT <span>·</span> SCROLL TO ZOOM <span>·</span> RIGHT-DRAG TO PAN</div><div class="axis-key"><span>X</span><span>Y</span><span>Z ↑</span></div></div>
-      <div class="preview-bottom"><div id="collision-summary" role="status" aria-live="polite"></div><div id="collision-list"></div><div id="validation" role="status" aria-live="polite"></div><details id="dimension-notices"><summary>Dimensions & model details</summary><div id="warnings"></div><p>Open chamber ends; covers, gaskets, bolts and attached equipment are excluded. Collision checks compare solid port tubes and flanges using tessellated geometry; touching faces are not an overlap.</p></details><p><a class="inline-link" href="/fusion-help.html" target="_blank" rel="noopener">Run in Fusion</a></p><div class="model-stats" id="model-stats"></div></div>
+      <div class="preview-bottom"><div id="collision-summary" role="status" aria-live="polite"></div><div id="collision-list"></div><div id="validation" role="status" aria-live="polite"></div><details id="dimension-notices"><summary>Dimensions & model details</summary><div id="warnings"></div><p>Open chamber ends; covers, gaskets, bolts and attached equipment are excluded. Collision checks compare solid port tubes and flanges using tessellated geometry; touching faces are not an overlap. Coincident axes also trigger a warning when ports share the same focal elevation and outward direction, even if their sizes or focal lengths differ and their solids do not overlap.</p></details><p><a class="inline-link" href="./fusion-help.html" target="_blank" rel="noopener">Run in Fusion</a></p><div class="model-stats" id="model-stats"></div></div>
     </section>
   </main>
   <dialog id="help"><button id="help-close" class="dialog-close" aria-label="Close">×</button><div class="eyebrow">PLACEMENT GUIDE</div><h2>One focus. Two angles.</h2><svg viewBox="0 0 460 200" role="img" aria-label="Side view of chamber, focal point and angled port"><path d="M100 25H280V175H100Z" fill="#e8eff0" stroke="#83979f" stroke-width="2"/><path d="M190 10V190M85 175H300" stroke="#97a6ac" stroke-dasharray="4 4"/><path d="M190 135L345 60" stroke="#0b8b77" stroke-width="3"/><path d="M277 84L320 63L335 94L292 115Z" fill="#b1c6cd" stroke="#516f7b"/><path d="M319 55L340 99" stroke="#516f7b" stroke-width="7"/><circle cx="190" cy="135" r="5" fill="#0b8b77"/><path d="M190 100Q220 100 221 120" fill="none" stroke="#0b8b77"/><text x="205" y="94">β</text><text x="203" y="158">Focus</text><text x="12" y="146">Elevation</text><path d="M80 175V135" stroke="#0b8b77"/><text x="280" y="40">Flange face</text></svg><dl><dt>Focal point elevation</dt><dd>Height from the bottom flange face to the focus on the chamber axis.</dd><dt>Focal length</dt><dd>Distance along the port axis from the focus to the outer flange sealing face.</dd><dt>Alpha · 0–360°</dt><dd>Rotation around the chamber, counterclockwise from +X in top view.</dd><dt>Beta · 45–135°</dt><dd>Angle from the vertical chamber axis. 90° is a horizontal radial port; below 90° points upward.</dd></dl><p>The model uses Z as its vertical axis. All saved dimensions use millimeters; switching display units does not change geometry.</p></dialog>
   <div id="toast" role="status" hidden></div>
-  <script type="module" src="/app.js"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

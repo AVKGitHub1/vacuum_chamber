@@ -38,6 +38,7 @@ def test_default_api_and_download_have_consistent_valid_geometry(endpoint):
     assert status == 200
     assert result["errors"] == []
     assert result["collisions"] == []
+    assert result["coincidences"] == []
     assert len(result["meshes"]) == 7
     status, script, headers = post(endpoint, "/api/export", config)
     assert status == 200
@@ -55,6 +56,42 @@ def test_collision_is_red_and_export_is_still_allowed(endpoint):
     assert result["collisions"]
     assert sum(m["collision"] for m in result["meshes"]) == 4
     assert post(endpoint, "/api/export", config)[0] == 200
+
+
+def test_nested_coincident_ports_warn_without_material_overlap_and_can_export(endpoint):
+    config = server.default_config()
+    config["ports"][0].update(flange="CF40", elevation=254, alpha=0, beta=90, focalLength=240)
+    config["ports"][0].pop("dimensions", None)
+    nested = copy.deepcopy(config["ports"][0])
+    nested.update(id="B", flange="CF16", focalLength=220)
+    unrelated = copy.deepcopy(config["ports"][0])
+    unrelated.update(id="C", alpha=180)
+    config["ports"] = [config["ports"][0], nested, unrelated]
+
+    status, payload, _ = post(endpoint, "/api/evaluate", config)
+    result = json.loads(payload)
+    assert status == 200 and result["errors"] == []
+    assert result["collisions"] == []
+    assert result["coincidences"] == [{"ports": ["A", "B"]}]
+    assert result["metrics"]["collisionCount"] == 0
+    assert result["metrics"]["coincidenceCount"] == 1
+    assert any("Ports A and B" in warning and "coincident" in warning
+               and "Export remains available" in warning for warning in result["warnings"])
+    assert all(not mesh["collision"] for mesh in result["meshes"])
+    assert all(mesh["coincident"] == (mesh["portId"] in ("A", "B")) for mesh in result["meshes"])
+    assert sum(mesh["coincident"] for mesh in result["meshes"]) == 4
+
+    status, script, _ = post(endpoint, "/api/export", config)
+    assert status == 200
+    compile(script.decode(), "Chamber.py", "exec")
+
+    config["ports"][1]["alpha"] = 90
+    _, payload, _ = post(endpoint, "/api/evaluate", config)
+    separated = json.loads(payload)
+    assert separated["errors"] == []
+    assert separated["coincidences"] == []
+    assert all(not mesh["coincident"] for mesh in separated["meshes"])
+    assert not any("coincident" in warning for warning in separated["warnings"])
 
 
 def test_invalid_dimensions_disable_preview_success_and_export(endpoint):

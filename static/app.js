@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { displayLength, canonicalLength, nextPortId, escapeHTML as esc, validateImport, suggestedEnd } from './state.js';
+import { apiFetch, isBrowserRuntime, onRuntimeProgress } from './api.js';
 
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY='chamber-studio-v1';
@@ -59,7 +60,7 @@ async function compute(){
   const requestVersion=version;
   if(activeRequest)activeRequest.abort();activeRequest=new AbortController();
   try{
-    const response=await fetch('/api/evaluate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config),signal:activeRequest.signal});
+    const response=await apiFetch('/api/evaluate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config),signal:activeRequest.signal});
     const result=await response.json();if(requestVersion!==version)return;
     if(!response.ok)throw Error(result.error||'Could not evaluate the chamber.');
     evaluation=result;updateResults();updateMeshes(result.meshes||[]);if(firstView&&(result.meshes||[]).length){fitView();firstView=false;}
@@ -67,17 +68,26 @@ async function compute(){
 }
 function updatePortStates(){
   const collisions=new Set(evaluation?.collisions?.flatMap(c=>c.ports)||[]);
-  document.querySelectorAll('.port-card').forEach(card=>{const hit=collisions.has(card.dataset.port);card.classList.toggle('colliding',hit);const invalid=evaluation?.errors?.some(e=>{const i=config.ports.findIndex(p=>p.id===card.dataset.port);return e.path?.startsWith(`ports.${i}.`);});card.querySelector('.port-state').textContent=hit?'Collision':invalid?'Check inputs':evaluation?'Clear':'…';});
+  const coincidences=new Set(evaluation?.coincidences?.flatMap(c=>c.ports)||[]);
+  document.querySelectorAll('.port-card').forEach(card=>{const hit=collisions.has(card.dataset.port),coincident=coincidences.has(card.dataset.port);card.classList.toggle('colliding',hit||coincident);const invalid=evaluation?.errors?.some(e=>{const i=config.ports.findIndex(p=>p.id===card.dataset.port);return e.path?.startsWith(`ports.${i}.`);});card.querySelector('.port-state').textContent=hit?(coincident?'Collision + coincident':'Collision'):coincident?'Coincident':invalid?'Check inputs':evaluation?'Clear':'…';});
 }
 function updateResults(){
-  const {errors=[],warnings=[],collisions=[],metrics={}}=evaluation;
-  const pairs=new Map();for(const c of collisions){const key=c.ports.join(' / ');if(!pairs.has(key))pairs.set(key,[]);pairs.get(key).push(c);}
-  const box=$('#collision-summary');box.className=collisions.length?'danger':errors.length?'neutral':'';
-  box.innerHTML=collisions.length?`<span class="icon">!</span><div><strong>${pairs.size} colliding port ${pairs.size===1?'pair':'pairs'}</strong><small>Overlapping tubes or flanges are red. Export remains available.</small></div>`:errors.length?'<span class="icon">!</span><div><strong>Complete the configuration</strong><small>Resolve the inputs below to check all ports.</small></div>':'<span class="icon">✓</span><div><strong>No port collisions detected</strong><small>Port tubes and flanges are clear of one another.</small></div>';
-  $('#collision-list').innerHTML=[...pairs.entries()].map(([name,items])=>`<div class="collision-item"><span><strong>${esc(name)}</strong> · ${[...new Set(items.map(c=>c.parts.join(' / ')))].map(esc).join(', ')}</span><button data-focus="${esc(items[0].ports.join('|'))}">Locate</button></div>`).join('');
+  const {errors=[],warnings=[],collisions=[],coincidences=[],metrics={}}=evaluation;
+  const pairs=new Map();
+  for(const [items,kind] of [[collisions,'collision'],[coincidences,'coincident']])for(const item of items){
+    const ports=[...item.ports].sort(),key=JSON.stringify(ports);
+    if(!pairs.has(key))pairs.set(key,{ports,parts:new Set(),coincident:false});
+    const pair=pairs.get(key);if(kind==='coincident')pair.coincident=true;else pair.parts.add(item.parts.join(' / '));
+  }
+  const box=$('#collision-summary');box.className=pairs.size?'danger':errors.length?'neutral':'';
+  const pairLabel=pairs.size===1?'pair':'pairs';
+  const heading=coincidences.length?(collisions.length?`${pairs.size} port ${pairLabel} with collisions or coincident axes`:`${pairs.size} coincident port ${pairLabel}`):`${pairs.size} colliding port ${pairLabel}`;
+  const detail=coincidences.length?'Ports with coincident axes or overlapping solids are red. Export remains available.':'Overlapping tubes or flanges are red. Export remains available.';
+  box.innerHTML=pairs.size?`<span class="icon">!</span><div><strong>${heading}</strong><small>${detail}</small></div>`:errors.length?'<span class="icon">!</span><div><strong>Complete the configuration</strong><small>Resolve the inputs below to check all ports.</small></div>':'<span class="icon">✓</span><div><strong>No port collisions detected</strong><small>Port tubes and flanges are clear of one another; no coincident axes detected.</small></div>';
+  $('#collision-list').innerHTML=[...pairs.values()].map(pair=>`<div class="collision-item"><span><strong>${esc(pair.ports.join(' / '))}</strong> · ${[...(pair.coincident?['Coincident axes (same position and direction)']:[]),...pair.parts].map(esc).join(', ')}</span><button data-focus="${esc(pair.ports.join('|'))}">Locate</button></div>`).join('');
   $('#validation').innerHTML=errors.length?`<ul>${errors.map(e=>`<li>${esc(e.message)}</li>`).join('')}</ul>`:'';
   $('#warnings').innerHTML=[...new Set(warnings)].map(w=>`<p>${esc(w)}</p>`).join('');
-  $('#compute-state').textContent=errors.length?'Check inputs':collisions.length?'Interference':'Up to date';$('#compute-state').className='status-chip'+(errors.length||collisions.length?' bad':'');
+  $('#compute-state').textContent=errors.length?'Check inputs':collisions.length?'Interference':coincidences.length?'Coincident ports':'Up to date';$('#compute-state').className='status-chip'+(errors.length||pairs.size?' bad':'');
   $('#export').disabled=errors.length>0;
   $('#model-stats').innerHTML=`<div>BODY OD<strong>${displayLength(config.body.od,config.units)} ${config.units}</strong></div><div>HEIGHT<strong>${displayLength(config.body.height,config.units)} ${config.units}</strong></div><div>PORTS<strong>${metrics.portCount??config.ports.length}</strong></div><div>EXPORT<strong>Editable Fusion features</strong></div>`;
   updatePortStates();
@@ -106,7 +116,7 @@ function updateMeshes(meshes){
     if(!data.positions?.length)continue;
     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(data.positions,3));geo.setIndex(data.indices);geo.computeVertexNormals();
     // Flat normals retain crisp bolt holes and sealing edges across the CSG mesh.
-    const material=new THREE.MeshStandardMaterial({color:data.collision?0xd94a55:data.kind==='body'?0xb3c6cf:0xc9d7dd,metalness:.35,roughness:.38,side:THREE.DoubleSide,flatShading:true,transparent:xray,opacity:xray?.35:1,depthWrite:!xray});
+    const material=new THREE.MeshStandardMaterial({color:data.collision||data.coincident?0xd94a55:data.kind==='body'?0xb3c6cf:0xc9d7dd,metalness:.35,roughness:.38,side:THREE.DoubleSide,flatShading:true,transparent:xray,opacity:xray?.35:1,depthWrite:!xray});
     const mesh=new THREE.Mesh(geo,material);mesh.userData=data;meshGroup.add(mesh);
   }
   labelPoints=[];$('#port-labels').replaceChildren();labels=[];
@@ -114,7 +124,7 @@ function updateMeshes(meshes){
     if(!meshes.some(m=>m.portId===p.id))continue;
     const a=p.alpha*Math.PI/180,b=p.beta*Math.PI/180,L=p.focalLength;
     const point=new THREE.Vector3(L*Math.sin(b)*Math.cos(a),L*Math.sin(b)*Math.sin(a),p.elevation+L*Math.cos(b));
-    const label=document.createElement('span');label.className='port-label'+(evaluation?.collisions?.some(c=>c.ports.includes(p.id))?' bad':'');label.textContent=p.id;$('#port-labels').append(label);labels.push(label);labelPoints.push(point);
+    const label=document.createElement('span');label.className='port-label'+([...(evaluation?.collisions||[]),...(evaluation?.coincidences||[])].some(c=>c.ports.includes(p.id))?' bad':'');label.textContent=p.id;$('#port-labels').append(label);labels.push(label);labelPoints.push(point);
   }
 }
 function updateLabels(){
@@ -163,16 +173,24 @@ function bindEvents(){
   $('#transparent').onchange=()=>{if(evaluation)updateMeshes(evaluation.meshes||[]);};
   $('#help-open').onclick=()=>$('#help').showModal();$('#help-close').onclick=()=>$('#help').close();
   $('#save').onclick=()=>download(JSON.stringify(config,null,2),'chamber-config.json','application/json');
-  $('#open-file').onchange=async event=>{try{const file=event.target.files[0];if(!file)return;if(file.size>1_000_000)throw Error('Configuration file is too large.');const candidate=validateImport(JSON.parse(await file.text()));const response=await fetch('/api/evaluate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(candidate)});const result=await response.json();if(!response.ok)throw Error(result.error);if(result.errors?.some(e=>!e.path?.startsWith('ports.')))throw Error(result.errors.map(e=>e.message).join(' '));config=candidate;firstView=true;render();schedule();toast('Configuration opened.');}catch(error){toast('Could not open configuration: '+error.message);}finally{event.target.value='';}};
-  $('#reset').onclick=async()=>{try{const response=await fetch('/api/default');if(!response.ok)throw Error('Could not load example');config=await response.json();firstView=true;render();schedule();}catch(error){toast(error.message);}};
-  $('#export').onclick=async()=>{const button=$('#export'),snapshot=structuredClone(config);button.disabled=true;button.textContent='Preparing…';try{const response=await fetch('/api/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(snapshot)});if(!response.ok){const error=await response.json();throw Error(error.error||'Export failed');}download(await response.text(),'Chamber.py','text/x-python');toast('Chamber.py downloaded. Create a Python script named Chamber in Fusion, replace its Chamber.py, then Run. See Run in Fusion for instructions.');}catch(error){toast(error.message);}finally{button.textContent='↓ Export Fusion Python';button.disabled=!evaluation||evaluation.errors?.length>0;}};
+  $('#open-file').onchange=async event=>{try{const file=event.target.files[0];if(!file)return;if(file.size>1_000_000)throw Error('Configuration file is too large.');const candidate=validateImport(JSON.parse(await file.text()));const response=await apiFetch('/api/evaluate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(candidate)});const result=await response.json();if(!response.ok)throw Error(result.error);if(result.errors?.some(e=>!e.path?.startsWith('ports.')))throw Error(result.errors.map(e=>e.message).join(' '));config=candidate;firstView=true;render();schedule();toast('Configuration opened.');}catch(error){toast('Could not open configuration: '+error.message);}finally{event.target.value='';}};
+  $('#reset').onclick=async()=>{try{const response=await apiFetch('/api/default');if(!response.ok)throw Error('Could not load example');config=await response.json();firstView=true;render();schedule();}catch(error){toast(error.message);}};
+  $('#export').onclick=async()=>{const button=$('#export'),snapshot=structuredClone(config);button.disabled=true;button.textContent='Preparing…';try{const response=await apiFetch('/api/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(snapshot)});if(!response.ok){const error=await response.json();throw Error(error.error||'Export failed');}download(await response.text(),'Chamber.py','text/x-python');toast('Chamber.py downloaded. Create a Python script named Chamber in Fusion, replace its Chamber.py, then Run. See Run in Fusion for instructions.');}catch(error){toast(error.message);}finally{button.textContent='↓ Export Fusion Python';button.disabled=!evaluation||evaluation.errors?.length>0;}};
 }
 
 async function start(){
+  let stopProgress=()=>{};
+  if(isBrowserRuntime){
+    $('#workspace-label').textContent='Browser workspace';
+    $('#compute-state').textContent='Loading geometry…';
+    $('#compute-state').className='status-chip busy';
+    $('#validation').textContent='Loading geometry tools. The first visit may take a moment.';
+    stopProgress=onRuntimeProgress(message=>{$('#validation').textContent=message;});
+  }
   try{
-    const responses=await Promise.all([fetch('/api/catalog'),fetch('/api/default')]);if(responses.some(r=>!r.ok))throw Error('Could not load chamber data.');[catalog,config]=await Promise.all(responses.map(r=>r.json()));
+    const responses=await Promise.all([apiFetch('/api/catalog'),apiFetch('/api/default')]);if(responses.some(r=>!r.ok))throw Error('Could not load chamber data.');[catalog,config]=await Promise.all(responses.map(r=>r.json()));
     try{const stored=localStorage.getItem(STORAGE_KEY);if(stored)config=validateImport(JSON.parse(stored));}catch{toast('The saved configuration could not be loaded. The example has been restored.');}
-    render();bindEvents();setupScene();schedule();
-  }catch(error){$('#compute-state').textContent='Disconnected';$('#compute-state').className='status-chip bad';$('#validation').textContent=error.message+' Start the local server and reload this page.';}
+    stopProgress();render();bindEvents();setupScene();schedule();
+  }catch(error){stopProgress();$('#compute-state').textContent=isBrowserRuntime?'Could not start':'Disconnected';$('#compute-state').className='status-chip bad';$('#validation').textContent=error.message+(isBrowserRuntime?(error.name==='GeometryRuntimeError'?'':' Check your connection and reload this page.'):' Start the local server and reload this page.');}
 }
 start();

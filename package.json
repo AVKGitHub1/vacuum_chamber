@@ -2,6 +2,19 @@
   "name": "chamber-studio",
   "private": true,
   "type": "module",
-  "scripts": {"test": "node --test tests/frontend.test.mjs tests/ui.test.mjs"},
-  "devDependencies": {"jsdom": "26.1.0", "three": "0.180.0"}
+  "engines": {"node": ">=22"},
+  "scripts": {
+    "build": "node scripts/build-pages.mjs",
+    "preview": "node scripts/serve-pages.mjs",
+    "test": "node --test tests/frontend.test.mjs tests/api.test.mjs tests/ui.test.mjs",
+    "test:wasm": "node --test tests/wasm.test.mjs",
+    "test:pages": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "jsdom": "26.1.0",
+    "manifold-3d": "3.5.4",
+    "pyodide": "0.28.3",
+    "three": "0.180.0"
+  }
 }
