@@ -1,0 +1,7 @@
+{
+  "name": "chamber-studio",
+  "private": true,
+  "type": "module",
+  "scripts": {"test": "node --test tests/frontend.test.mjs tests/ui.test.mjs"},
+  "devDependencies": {"jsdom": "26.1.0", "three": "0.180.0"}
+}
