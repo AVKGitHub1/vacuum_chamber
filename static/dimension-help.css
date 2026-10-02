@@ -1,9 +1,10 @@
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.field-name{line-height:1.4;min-height:14px}
-.dimension-help{display:inline;padding:0;border:0;border-radius:2px;background:none;color:inherit;font:inherit;text-align:left;line-height:inherit;cursor:help;text-decoration:underline dotted #b7c9cc;text-underline-offset:3px}
-.dimension-help:hover,.dimension-help[aria-expanded=true]{background:none;color:var(--green);text-decoration-color:var(--green)}
-.dimension-help:focus-visible{outline:2px solid #159c86;outline-offset:4px}
-.dimension-help-icon{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:12px;height:12px;margin-left:2px;border:1px solid #bdcecf;border-radius:50%;font-size:9px;font-weight:500;line-height:1;color:#78928f;text-decoration:none}
+.field-name{display:flex;align-items:center;gap:3px;line-height:1.4;min-height:24px}
+.field-name label{min-width:0}
+.dimension-help{display:inline-flex;align-items:center;justify-content:center;flex:0 0 24px;width:24px;height:24px;padding:0;border:0;border-radius:50%;background:none;color:#607f7b;font:inherit;cursor:pointer}
+.dimension-help:hover,.dimension-help[aria-expanded=true]{background:#e8f3f0;color:var(--green)}
+.dimension-help:focus-visible{outline:2px solid #159c86;outline-offset:2px}
+.dimension-help-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:1px solid currentColor;border-radius:50%;font-size:11px;font-weight:600;line-height:1}
 .dimension-tooltip{position:fixed;z-index:80;width:352px;max-width:calc(100vw - 20px);max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);overflow:auto;overscroll-behavior:contain;padding:18px;background:#fff;border:1px solid #cbdcde;border-radius:10px;box-shadow:0 12px 42px #203f4826,0 2px 6px #203f4810;color:#29434c}
 .dimension-tooltip[hidden]{display:none}
 .dimension-tooltip-head{display:flex;justify-content:space-between;align-items:center;gap:10px}

@@ -48,7 +48,7 @@ The local Python application binds to `127.0.0.1`. Three.js and OrbitControls ar
 - CF and ISO-F port sizes, the four CF flange styles, focal elevation, focal length, alpha, beta, port notes and configuration notes.
 - Inch/mm display switch; saved geometry always uses millimeters.
 - Editable body wall and advanced flange dimensions. Catalog-backed values and provisional detail profiles are identified in the interface and [source notes](docs/catalog-sources.md).
-- Schematic guides for every numeric field, including the body-diameter selector. Hover a field name, focus it with the keyboard, or tap it to see the measured dimension. Press Escape, move away, or tap outside to dismiss the guide.
+- Schematic guides for every numeric field, including the body-diameter selector. Click or tap the **?** beside the field title to see the measured dimension, or focus the question-mark button and press Enter or Space. Click it again, press Escape, or click outside to dismiss the guide.
 
 Z is vertical. Alpha rotates counterclockwise from +X; beta is measured from +Z (45–135°, 90° radial). Focal elevation is measured from the bottom outside flange face. Focal length is the distance along the port axis from its outer flange face to the chamber centerline at that focal elevation, including for tilted ports. It includes the distance inside the chamber; it is not the exposed tube length. The coordinate guide is available beside the port controls.
 

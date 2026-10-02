@@ -17,7 +17,7 @@ function pathValue(path){return path.split('.').reduce((o,k)=>o?.[k],config);}
 function setPath(path,value){const keys=path.split('.');let node=config;for(const key of keys.slice(0,-1)){node[key]??={};node=node[key];}node[keys.at(-1)]=value;}
 function numericFieldName(path,label,unit=''){
   const id='field-'+path.replaceAll('.','-');
-  return `<span class="field-name"><button type="button" class="dimension-help" data-help-path="${esc(path)}" aria-label="Explain ${esc(label)}" aria-expanded="false">${esc(label)}${unit?` <em>${unit}</em>`:''} <span class="dimension-help-icon" aria-hidden="true">?</span></button></span><label class="visually-hidden" for="${esc(id)}">${esc(label)}${unit?' ('+esc(unit)+')':''}</label>`;
+  return `<span class="field-name"><label for="${esc(id)}">${esc(label)}${unit?` <em>${unit}</em>`:''}</label><button type="button" class="dimension-help" data-help-path="${esc(path)}" aria-label="Explain ${esc(label)}" aria-controls="dimension-tooltip" aria-expanded="false"><span class="dimension-help-icon" aria-hidden="true">?</span></button></span>`;
 }
 function numberField(path,label,{value=pathValue(path),kind='length',min,max}={}){
   const shown=kind==='length'?displayLength(value,config.units):(value??'');

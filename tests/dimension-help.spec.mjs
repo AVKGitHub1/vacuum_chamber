@@ -13,13 +13,12 @@ test.beforeEach(async ({page}) => {
 async function expectSchematic(page, path) {
   // Each coverage example begins after dismissing the preceding drawing.
   await page.keyboard.press('Escape');
-  // Programmatic form filling does not move the pointer off the previous name.
-  // Re-enter it so this really exercises a fresh user hover.
-  await page.mouse.move(0, 0);
   const help = helpFor(page, path);
-  await help.hover();
+  await help.click();
   const tooltip = tooltipFor(page);
   await expect(tooltip).toBeVisible();
+  await expect(help).toHaveAttribute('aria-expanded', 'true');
+  await expect(help).toHaveAttribute('aria-controls', 'dimension-tooltip');
   await expect(tooltip).toHaveAttribute('role', 'tooltip');
   await expect(tooltip.getByRole('img')).toBeVisible();
   await expect(tooltip.locator('svg title')).not.toBeEmpty();
@@ -30,8 +29,8 @@ async function expectSchematic(page, path) {
   return tooltip;
 }
 
-// Keep exhaustive coverage in bounded groups: each field still receives a real
-// hover, without sharing one timeout across the entire long, scrollable form.
+// Keep exhaustive coverage in bounded groups: each field receives a real click
+// without sharing one timeout across the entire long, scrollable form.
 for (const [name, prefix] of [['body and end flanges', 'body.'], ['port A', 'ports.0.'], ['port B', 'ports.1.']]) {
   test(`every numeric field explains its dimension: ${name}`, async ({page}) => {
     // Keep both sealing families represented while opening all advanced dimensions.
@@ -51,6 +50,10 @@ for (const [name, prefix] of [['body and end flanges', 'body.'], ['port A', 'por
         const control = page.locator(`[data-path="${path}"]`);
         const help = helpFor(page, path);
         await expect(help).toHaveAccessibleName(/^Explain /);
+        await expect(help).toHaveText('?');
+        await expect(help).toHaveAttribute('type', 'button');
+        await expect(help.locator('..').locator('label')).toBeVisible();
+        await expect(help.locator('..').locator('label .dimension-help')).toHaveCount(0);
         expect(await control.evaluate(input => Boolean(input.id
           && [...input.labels].some(label => label.htmlFor === input.id))),
         `The ${path} control keeps its label association`).toBe(true);
@@ -77,40 +80,64 @@ test('placement schematics describe the same reference axes and faces used by th
   }
 });
 
-test('hover, pointer movement, keyboard focus, and dismissal preserve the configuration', async ({page}) => {
+test('only question-mark activation opens help, with keyboard and pointer dismissal', async ({page}) => {
   const before = await savedConfig(page);
   const height = helpFor(page, 'body.height');
-  const tooltip = await expectSchematic(page, 'body.height');
-  await tooltip.hover();
-  // Wait beyond the pointer-leave grace period to catch popovers that vanish
-  // while the user moves from the field name onto the drawing.
-  await page.waitForTimeout(500);
+  const diameter = helpFor(page, 'body.od');
+  const tooltip = tooltipFor(page);
+  const title = height.locator('..').locator('label');
+  await title.hover();
+  await page.waitForTimeout(300);
+  await expect(tooltip).toBeHidden();
+  await title.click();
+  await expect(page.locator('[data-path="body.height"]')).toBeFocused();
+  await expect(tooltip).toBeHidden();
+  await height.hover();
+  await page.waitForTimeout(300);
+  await expect(tooltip).toBeHidden();
+  await height.focus();
+  await expect(height).toBeFocused();
+  await expect(tooltip).toBeHidden();
+  await expect(height).toHaveAttribute('aria-expanded', 'false');
+
+  await page.keyboard.press('Enter');
+  await expect(tooltip).toBeVisible();
+  await expect(height).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Enter');
+  await expect(tooltip).toBeHidden();
+  await page.keyboard.press('Space');
   await expect(tooltip).toBeVisible();
   await page.keyboard.press('Escape');
+  await expect(height).toBeFocused();
   await expect(tooltip).toBeHidden();
+  await expect(height).toHaveAttribute('aria-expanded', 'false');
 
   await page.locator('[data-path="body.od"]').focus();
   await page.keyboard.press('Tab');
   await expect(height).toBeFocused();
-  await expect(tooltip).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(height).toBeFocused();
   await expect(tooltip).toBeHidden();
+  await page.keyboard.press('Space');
+  await expect(tooltip).toBeVisible();
   await page.keyboard.press('Tab');
   await expect(page.locator('[data-path="body.height"]')).toBeFocused();
+  await expect(tooltip).toBeHidden();
 
-  await height.focus();
+  await expectSchematic(page, 'body.height');
+  await tooltip.click();
   await expect(tooltip).toBeVisible();
-  await page.keyboard.press('Tab');
+  await tooltip.hover();
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(300);
+  await expect(tooltip).toBeVisible();
+  await height.click();
   await expect(tooltip).toBeHidden();
   await expectSchematic(page, 'body.height');
+  await diameter.click();
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toContainText(/diameter/i);
+  await expect(height).toHaveAttribute('aria-expanded', 'false');
+  await expect(diameter).toHaveAttribute('aria-expanded', 'true');
   await page.locator('h1').click();
-  await expect(tooltip).toBeHidden();
-  await page.mouse.move(0, 0);
-  await height.hover();
-  await page.keyboard.press('Escape');
-  // Escape must also cancel a drawing whose hover delay has not elapsed yet.
-  await page.waitForTimeout(300);
   await expect(tooltip).toBeHidden();
   expect(await savedConfig(page)).toBe(before);
   await expect(page.locator('[data-path="body.height"]')).toHaveValue('20');
@@ -130,13 +157,15 @@ test('help survives units, new ports, profile changes, and field edits without a
   await expect(tooltipFor(page)).toBeHidden();
   await expectSchematic(page, 'ports.2.beta');
   await page.locator('[data-path="ports.2.flange"]').selectOption('ISO63F');
-  // DOM replacement can dispatch pointerover under a stationary cursor. Wait
-  // beyond the hover delay to verify dismissal lasts, not just its first frame.
+  // DOM replacement can dispatch pointer events under a stationary cursor.
+  // Dismissal must last until the user activates a question mark again.
   await page.waitForTimeout(500);
   await expect(tooltipFor(page)).toBeHidden();
   await page.locator('.port-card').last().locator('details summary').click();
   await expectSchematic(page, 'ports.2.dimensions.sealDepth');
   await expect(helpFor(page, 'ports.2.dimensions.knifeHalfWidth')).toHaveCount(0);
+  await page.locator('.port-card').last().locator('details summary').click();
+  await expect(tooltipFor(page)).toBeHidden();
 
   await expectSchematic(page, 'ports.2.alpha');
   await page.locator('[data-path="ports.2.alpha"]').fill('240');
@@ -150,7 +179,7 @@ test('help survives units, new ports, profile changes, and field edits without a
 test.describe('touch screen help', () => {
   test.use({viewport: {width: 390, height: 844}, hasTouch: true, isMobile: true});
 
-  test('tapping a name toggles a readable schematic inside the mobile viewport', async ({page}, testInfo) => {
+  test('tapping a question mark toggles a readable schematic inside the mobile viewport', async ({page}, testInfo) => {
     const before = await savedConfig(page);
     const help = helpFor(page, 'ports.0.beta');
     const tooltip = tooltipFor(page);
