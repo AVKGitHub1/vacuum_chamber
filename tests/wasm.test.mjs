@@ -23,12 +23,16 @@ collision = copy.deepcopy(base)
 collision["ports"][1] = dict(copy.deepcopy(collision["ports"][0]), id="B")
 variants["collision"] = collision
 nested = copy.deepcopy(collision)
+nested["ports"] = nested["ports"][:2]
+nested["ports"][0].update(flange="CF40", dimensions={}, focalLength=240)
+nested["ports"][1]["dimensions"] = {}
 nested["ports"][1].update(flange="CF16", focalLength=220)
 variants["nested"] = nested
 tilted = copy.deepcopy(base)
 tilted["ports"][1].update(alpha=185, beta=75)
 variants["tilted"] = tilted
 invalid = copy.deepcopy(base)
+invalid["ports"][0]["flange"] = "CF40"
 invalid["ports"][0]["dimensions"] = {"knifeHalfWidth": 50}
 variants["invalid"] = invalid
 results = {}
@@ -54,6 +58,11 @@ print(json.dumps(results, allow_nan=False))
   for (const name of ['manifold3d.py', 'chamber.py', 'fusion_export.py', 'service.py']) {
     pyodide.FS.writeFile(`/home/pyodide/${name}`, await readFile(join(root, 'dist', 'python', name), 'utf8'));
   }
+  pyodide.FS.mkdirTree('/home/pyodide/examples/Chamber');
+  pyodide.FS.writeFile('/home/pyodide/examples/Chamber/chamber-config.json',
+    await readFile(join(root, 'dist', 'examples', 'Chamber', 'chamber-config.json'), 'utf8'));
+  assert.deepEqual(JSON.parse(pyodide.runPython('import json\nfrom service import default_config\njson.dumps(default_config())')),
+    fixtures.default.config, 'Both runtimes load the checked-in startup configuration');
   pyodide.globals.set('_catalog_json', await readFile(join(root, 'data', 'catalog.json'), 'utf8'));
   pyodide.runPython('import json\nfrom service import evaluate_document\nfrom fusion_export import generate_script\n_catalog = json.loads(_catalog_json)');
   for (const [name, fixture] of Object.entries(fixtures)) {

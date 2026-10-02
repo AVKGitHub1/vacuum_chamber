@@ -33,13 +33,15 @@ def post(endpoint, path, config):
 
 def test_default_api_and_download_have_consistent_valid_geometry(endpoint):
     config = json.load(urlopen(endpoint + "/api/default"))
+    expected = json.loads((server.ROOT / "examples/Chamber/chamber-config.json").read_text(encoding="utf-8"))
+    assert config == expected
     status, payload, _ = post(endpoint, "/api/evaluate", config)
     result = json.loads(payload)
     assert status == 200
     assert result["errors"] == []
     assert result["collisions"] == []
     assert result["coincidences"] == []
-    assert len(result["meshes"]) == 7
+    assert len(result["meshes"]) == 3 + 2 * len(config["ports"])
     status, script, headers = post(endpoint, "/api/export", config)
     assert status == 200
     compile(script.decode(), "Chamber.py", "exec")
@@ -96,6 +98,7 @@ def test_nested_coincident_ports_warn_without_material_overlap_and_can_export(en
 
 def test_invalid_dimensions_disable_preview_success_and_export(endpoint):
     config = server.default_config()
+    config["ports"][0]["flange"] = "CF40"
     config["ports"][0]["dimensions"] = {"knifeHalfWidth": 50}
     _, payload, _ = post(endpoint, "/api/evaluate", config)
     assert json.loads(payload)["errors"]

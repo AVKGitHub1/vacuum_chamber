@@ -68,7 +68,7 @@ test('the preview rests when idle and redraws for camera, size, display, and geo
     await page.locator('[data-duplicate="0"]').click();
     await expect(page.locator('#compute-state')).toHaveText('Interference');
   });
-  await expect(page.locator('#port-labels .port-label')).toHaveCount(3);
+  await expect(page.locator('#port-labels .port-label')).toHaveCount(5);
   const beforeLocate = await labelPositions(page);
   await expectRedraw(page, () => page.getByRole('button', {name: 'Locate'}).click());
   expect(await labelPositions(page)).not.toEqual(beforeLocate);

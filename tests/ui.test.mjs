@@ -8,6 +8,7 @@ import http from 'node:http';
 import {JSDOM,VirtualConsole} from 'jsdom';
 
 let child,dom,base,doc;
+const startup=JSON.parse(await readFile('examples/Chamber/chamber-config.json','utf8'));
 const nativeFetch=globalThis.fetch;
 function loopbackFetch(url,options={}){
   return new Promise((resolve,reject)=>{
@@ -30,8 +31,9 @@ before(async()=>{
   base=await new Promise((resolve,reject)=>{child.once('error',reject);child.stdout.on('data',b=>{const match=b.toString().match(/http:\/\/127\.0\.0\.1:\d+/);if(match)resolve(match[0]);});child.once('exit',code=>reject(Error('Server exited '+code)));});
   const virtualConsole=new VirtualConsole();
   dom=new JSDOM(await readFile('static/index.html','utf8'),{url:base,pretendToBeVisual:true,virtualConsole});doc=dom.window.document;
-  // Exercise recovery from a malformed document in persistent browser storage.
-  dom.window.localStorage.setItem('chamber-studio-v1',JSON.stringify({schemaVersion:1,units:'in',body:{},ports:[]}));
+  // A valid previous session must not override the checked-in startup chamber.
+  const previous=structuredClone(startup);previous.body.height=508;previous.notes='Previous session';
+  dom.window.localStorage.setItem('chamber-studio-v1',JSON.stringify(previous));
   Object.assign(globalThis,{window:dom.window,document:doc,localStorage:dom.window.localStorage,devicePixelRatio:1});
   globalThis.fetch=loopbackFetch;
   dom.window.HTMLCanvasElement.prototype.getContext=()=>null;
@@ -42,16 +44,17 @@ before(async()=>{
 });
 after(()=>{clearTimeout(doc?.querySelector('#toast')?.timer);child?.kill();dom?.window.close();globalThis.fetch=nativeFetch;});
 
-test('startup restores example after bad storage and exposes editable form',()=>{
-  assert.equal(doc.querySelectorAll('.port-card').length,2);
-  assert.equal(doc.querySelector('[data-path="body.height"]').value,'20');
+test('startup loads the checked-in configuration instead of the previous browser snapshot',()=>{
+  assert.deepEqual(JSON.parse(localStorage.getItem('chamber-studio-v1')),startup);
+  assert.equal(doc.querySelectorAll('.port-card').length,4);
+  assert.equal(doc.querySelector('[data-path="body.height"]').value,'15');
   assert.equal(doc.querySelector('#export').disabled,false);
   assert.match(doc.querySelector('#collision-summary').textContent,/No port collisions/);
 });
 test('display units round-trip without modifying the saved millimeters',()=>{
   const before=JSON.parse(localStorage.getItem('chamber-studio-v1')).body;
-  doc.querySelector('[data-unit="mm"]').click();assert.equal(doc.querySelector('[data-path="body.height"]').value,'508');
-  doc.querySelector('[data-unit="in"]').click();assert.equal(doc.querySelector('[data-path="body.height"]').value,'20');
+  doc.querySelector('[data-unit="mm"]').click();assert.equal(doc.querySelector('[data-path="body.height"]').value,'381');
+  doc.querySelector('[data-unit="in"]').click();assert.equal(doc.querySelector('[data-path="body.height"]').value,'15');
   assert.deepEqual(JSON.parse(localStorage.getItem('chamber-studio-v1')).body,before);
 });
 test('duplicate ports display red collision states while still exporting',async()=>{
@@ -65,7 +68,7 @@ test('duplicate ports display red collision states while still exporting',async(
   assert.equal(doc.querySelector('#export').disabled,false);
   doc.querySelector('#export').click();
   await waitFor(()=>doc.body.dataset.download==='Chamber.py');
-  doc.querySelector('[data-remove="2"]').click();await waitFor(()=>doc.querySelector('#compute-state').textContent==='Up to date');
+  doc.querySelector('[data-remove="4"]').click();await waitFor(()=>doc.querySelector('#compute-state').textContent==='Up to date');
 });
 test('invalid angle blocks export and correction clears the validation',async()=>{
   change('[data-path="ports.0.beta"]',44);
@@ -81,6 +84,8 @@ test('switching to ISO-F hides CF styles and produces a valid standard profile',
 });
 
 test('nested ports with coincident axes warn without solid overlap, can be located, and clear after moving',async()=>{
+  doc.querySelector('[data-remove="3"]').click();
+  doc.querySelector('[data-remove="2"]').click();
   doc.querySelector('[data-unit="mm"]').click();
   change('[data-path="ports.0.flange"]','CF100');
   change('[data-path="ports.1.flange"]','CF16');
@@ -109,4 +114,11 @@ test('nested ports with coincident axes warn without solid overlap, can be locat
   assert.equal(doc.querySelectorAll('.port-card.colliding').length,0);
   assert.deepEqual([...doc.querySelectorAll('.port-state')].map(el=>el.textContent),['Clear','Clear']);
   assert.equal(doc.querySelector('#export').disabled,false);
+});
+
+test('reload startup restores the checked-in chamber after edits',async()=>{
+  doc.querySelector('#reset').click();
+  await waitFor(()=>doc.querySelectorAll('.port-card').length===4&&doc.querySelector('#compute-state').textContent==='Up to date');
+  assert.deepEqual(JSON.parse(localStorage.getItem('chamber-studio-v1')),startup);
+  assert.equal(doc.querySelectorAll('.port-card').length,4);
 });

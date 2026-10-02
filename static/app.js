@@ -56,7 +56,7 @@ function render(){
   document.querySelectorAll('details[data-detail]').forEach(d=>d.open=open.has(d.dataset.detail));
   updatePortStates();
 }
-function persist(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(config));$('#save-state').textContent='Saved in this browser';}catch{$('#save-state').textContent='Use Save to keep this configuration';}}
+function persist(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(config));}catch{}$('#save-state').textContent='Use Save to keep this configuration';}
 function schedule(){
   hideDimensionHelp();
   version++;evaluation=null;$('#export').disabled=true;$('#compute-state').textContent='Updating…';$('#compute-state').className='status-chip busy';
@@ -194,7 +194,7 @@ function bindEvents(){
   $('#help-open').onclick=()=>$('#help').showModal();$('#help-close').onclick=()=>$('#help').close();
   $('#save').onclick=()=>download(JSON.stringify(config,null,2),'chamber-config.json','application/json');
   $('#open-file').onchange=async event=>{try{const file=event.target.files[0];if(!file)return;if(file.size>1_000_000)throw Error('Configuration file is too large.');const candidate=validateImport(JSON.parse(await file.text()));const response=await apiFetch('/api/evaluate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(candidate)});const result=await response.json();if(!response.ok)throw Error(result.error);if(result.errors?.some(e=>!e.path?.startsWith('ports.')))throw Error(result.errors.map(e=>e.message).join(' '));config=candidate;firstView=true;render();schedule();toast('Configuration opened.');}catch(error){toast('Could not open configuration: '+error.message);}finally{event.target.value='';}};
-  $('#reset').onclick=async()=>{try{const response=await apiFetch('/api/default');if(!response.ok)throw Error('Could not load example');config=await response.json();firstView=true;render();schedule();}catch(error){toast(error.message);}};
+  $('#reset').onclick=async()=>{try{const response=await apiFetch('/api/default');if(!response.ok)throw Error('Could not load startup configuration');config=validateImport(await response.json());firstView=true;render();schedule();}catch(error){toast(error.message);}};
   $('#export').onclick=async()=>{const button=$('#export'),snapshot=structuredClone(config);button.disabled=true;button.textContent='Preparing…';try{const response=await apiFetch('/api/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(snapshot)});if(!response.ok){const error=await response.json();throw Error(error.error||'Export failed');}download(await response.text(),'Chamber.py','text/x-python');toast('Chamber.py downloaded. Create a Python script named Chamber in Fusion, replace its Chamber.py, then Run. See Run in Fusion for instructions.');}catch(error){toast(error.message);}finally{button.textContent='↓ Export Fusion Python';button.disabled=!evaluation||evaluation.errors?.length>0;}};
 }
 
@@ -209,7 +209,7 @@ async function start(){
   }
   try{
     const responses=await Promise.all([apiFetch('/api/catalog'),apiFetch('/api/default')]);if(responses.some(r=>!r.ok))throw Error('Could not load chamber data.');[catalog,config]=await Promise.all(responses.map(r=>r.json()));
-    try{const stored=localStorage.getItem(STORAGE_KEY);if(stored)config=validateImport(JSON.parse(stored));}catch{toast('The saved configuration could not be loaded. The example has been restored.');}
+    config=validateImport(config);
     stopProgress();initDimensionHelp();render();bindEvents();setupScene();schedule();
   }catch(error){stopProgress();$('#compute-state').textContent=isBrowserRuntime?'Could not start':'Disconnected';$('#compute-state').className='status-chip bad';$('#validation').textContent=error.message+(isBrowserRuntime?(error.name==='GeometryRuntimeError'?'':' Check your connection and reload this page.'):' Start the local server and reload this page.');}
 }

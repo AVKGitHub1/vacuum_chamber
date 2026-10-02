@@ -23,7 +23,7 @@ def end_profile(body_od, family):
 
 
 def default_config():
-    return make_default_config(CATALOG)
+    return make_default_config()
 
 
 @lru_cache(maxsize=5)
@@ -55,7 +55,11 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         path = urlsplit(self.path).path
         if path == "/api/catalog": return self.respond(CATALOG)
-        if path == "/api/default": return self.respond(default_config())
+        if path == "/api/default":
+            try:
+                return self.respond(default_config())
+            except (OSError, ValueError) as exc:
+                return self.respond({"error": "Could not load startup configuration: " + str(exc)}, 500)
         if path == "/api/health": return self.respond({"status": "ok", "app": "chamber-studio"})
         if path.startswith("/api/"): return self.respond({"error": "Not found"}, 404)
         return super().do_GET()

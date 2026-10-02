@@ -3,6 +3,8 @@
 import {test as base, expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 
+const startup = JSON.parse(await readFile(new URL('../examples/Chamber/chamber-config.json', import.meta.url), 'utf8'));
+
 const test = base.extend({
   staticTraffic: [async ({context, baseURL}, use) => {
     const requests = [];
@@ -46,7 +48,9 @@ test('starts on a project subpath with local WASM and a real 3D preview', async 
   await expect(page.locator('#webgl-error')).toBeHidden();
   await expect(page.locator('#viewport canvas')).toBeVisible();
   // Labels are created from returned port meshes, after real CSG evaluation.
-  await expect(page.locator('#port-labels .port-label')).toHaveCount(2);
+  await expect(page.locator('#port-labels .port-label')).toHaveCount(startup.ports.length);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('chamber-studio-v1')))).toEqual(startup);
+  expect(staticTraffic.some(url => new URL(url).pathname.endsWith('/examples/Chamber/chamber-config.json'))).toBe(true);
   await expect(page.locator('#collision-summary')).toContainText('No port collisions detected');
   expect(staticTraffic.filter(url => new URL(url).pathname.endsWith('.wasm')).length).toBeGreaterThanOrEqual(2);
   const preview = testInfo.outputPath('browser-geometry-preview.png');
@@ -59,10 +63,26 @@ test('starts on a project subpath with local WASM and a real 3D preview', async 
   await expect(help.locator('body')).toContainText('Fusion');
 });
 
+test('reload and Reload startup restore the checked-in file over the previous browser snapshot', async ({page}) => {
+  await page.locator('[data-path="body.height"]').fill('21');
+  await page.locator('#notes').fill('Previous browser session');
+  await page.reload();
+  await expect(page.locator('#compute-state')).toHaveText('Up to date', {timeout: 120_000});
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('chamber-studio-v1')))).toEqual(startup);
+  await page.locator('[data-path="body.height"]').fill('22');
+  await page.getByRole('button', {name: 'Reload startup'}).click();
+  await expect(page.locator('#compute-state')).toHaveText('Up to date');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('chamber-studio-v1')))).toEqual(startup);
+});
+
 test('unequal nested ports warn about coincident axes and clear after moving', async ({page}) => {
+  await page.locator('[data-remove="3"]').click();
+  await page.locator('[data-remove="2"]').click();
   await page.locator('[data-unit="mm"]').click();
   await page.locator('[data-path="ports.0.flange"]').selectOption('CF100');
   await page.locator('[data-path="ports.1.flange"]').selectOption('CF16');
+  await page.locator('[data-path="ports.0.focalLength"]').fill('240');
+  await page.locator('[data-path="ports.0.elevation"]').fill('190.5');
   await page.locator('[data-path="ports.1.focalLength"]').fill('210');
   await page.locator('[data-path="ports.1.alpha"]').fill('0');
   await expect(page.locator('#compute-state')).toHaveText('Coincident ports');
@@ -123,14 +143,14 @@ test('save and open exchange portable millimeter configurations', async ({page})
   const config = JSON.parse(await readFile(filename, 'utf8'));
   expect(config.schemaVersion).toBe(1);
   expect(config.units).toBe('in');
-  expect(config.body.height).toBe(508);
+  expect(config.body.height).toBe(startup.body.height);
   expect(config.notes).toBe('Portable Pages chamber');
   await page.locator('#notes').fill('Changed after saving');
   await page.locator('[data-path="body.height"]').fill('21');
   await expect(page.locator('#compute-state')).toHaveText('Up to date');
   await page.locator('#open-file').setInputFiles(filename);
   await expect(page.locator('#notes')).toHaveValue('Portable Pages chamber');
-  await expect(page.locator('[data-path="body.height"]')).toHaveValue('20');
+  await expect(page.locator('[data-path="body.height"]')).toHaveValue('15');
   await expect(page.locator('#compute-state')).toHaveText('Up to date');
   await expect(page.locator('#export')).toBeEnabled();
 });

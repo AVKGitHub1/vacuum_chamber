@@ -31,7 +31,7 @@ async function expectSchematic(page, path) {
 
 // Keep exhaustive coverage in bounded groups: each field receives a real click
 // without sharing one timeout across the entire long, scrollable form.
-for (const [name, prefix] of [['body and end flanges', 'body.'], ['port A', 'ports.0.'], ['port B', 'ports.1.']]) {
+for (const [name, prefix] of [['body and end flanges', 'body.'], ['port A', 'ports.0.'], ['port B', 'ports.1.'], ['port C', 'ports.2.'], ['port D', 'ports.3.']]) {
   test(`every numeric field explains its dimension: ${name}`, async ({page}) => {
     // Keep both sealing families represented while opening all advanced dimensions.
     await page.locator('[data-path="body.top"]').selectOption('CF FXD');
@@ -140,7 +140,7 @@ test('only question-mark activation opens help, with keyboard and pointer dismis
   await page.locator('h1').click();
   await expect(tooltip).toBeHidden();
   expect(await savedConfig(page)).toBe(before);
-  await expect(page.locator('[data-path="body.height"]')).toHaveValue('20');
+  await expect(page.locator('[data-path="body.height"]')).toHaveValue('15');
   await expect(page.locator('#compute-state')).toHaveText('Up to date');
 });
 
@@ -149,31 +149,31 @@ test('help survives units, new ports, profile changes, and field edits without a
   await expectSchematic(page, 'body.height');
   await page.locator('[data-unit="mm"]').click();
   await expect(tooltipFor(page)).toBeHidden();
-  await expect(page.locator('[data-path="body.height"]')).toHaveValue('508');
+  await expect(page.locator('[data-path="body.height"]')).toHaveValue('381');
   expect(JSON.parse(await savedConfig(page)).body).toEqual(bodyBefore);
   await expectSchematic(page, 'body.height');
 
   await page.locator('[data-duplicate="0"]').click();
   await expect(tooltipFor(page)).toBeHidden();
-  await expectSchematic(page, 'ports.2.beta');
-  await page.locator('[data-path="ports.2.flange"]').selectOption('ISO63F');
+  await expectSchematic(page, 'ports.4.beta');
+  await page.locator('[data-path="ports.4.flange"]').selectOption('ISO63F');
   // DOM replacement can dispatch pointer events under a stationary cursor.
   // Dismissal must last until the user activates a question mark again.
   await page.waitForTimeout(500);
   await expect(tooltipFor(page)).toBeHidden();
   await page.locator('.port-card').last().locator('details summary').click();
-  await expectSchematic(page, 'ports.2.dimensions.sealDepth');
-  await expect(helpFor(page, 'ports.2.dimensions.knifeHalfWidth')).toHaveCount(0);
+  await expectSchematic(page, 'ports.4.dimensions.sealDepth');
+  await expect(helpFor(page, 'ports.4.dimensions.knifeHalfWidth')).toHaveCount(0);
   await page.locator('.port-card').last().locator('details summary').click();
   await expect(tooltipFor(page)).toBeHidden();
 
-  await expectSchematic(page, 'ports.2.alpha');
-  await page.locator('[data-path="ports.2.alpha"]').fill('240');
+  await expectSchematic(page, 'ports.4.alpha');
+  await page.locator('[data-path="ports.4.alpha"]').fill('240');
   await expect(tooltipFor(page)).toBeHidden();
-  await expectSchematic(page, 'ports.2.alpha');
-  await page.locator('[data-remove="2"]').click();
+  await expectSchematic(page, 'ports.4.alpha');
+  await page.locator('[data-remove="4"]').click();
   await expect(tooltipFor(page)).toBeHidden();
-  await expect(helpFor(page, 'ports.2.alpha')).toHaveCount(0);
+  await expect(helpFor(page, 'ports.4.alpha')).toHaveCount(0);
 });
 
 test.describe('touch screen help', () => {

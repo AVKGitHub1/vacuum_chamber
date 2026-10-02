@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import copy
+import json
 import math
+from pathlib import Path
 
 from chamber import evaluate
 from fusion_export import prepare_export
@@ -18,17 +20,12 @@ def end_profile(body_od, family, catalog):
                 notes="Custom end profile: confirm all dimensions against a drawing.")
 
 
-def default_config(catalog):
-    od = 323.85
-    spec = end_profile(od, "ISO-F", catalog)
-    return dict(schemaVersion=1, units="in", body=dict(
-        od=od, height=508, wall=catalog.get("defaultAssumptions", {}).get("bodyWall", 3.175), top="ISO-F", bottom="ISO-F",
-        topRing="Flat, with holes", bottomRing="Flat, with holes", mountingBoss="None",
-        topSpec=copy.deepcopy(spec), bottomSpec=copy.deepcopy(spec)),
-        ports=[dict(id="A", flange="CF40", style="fixed-through", elevation=254,
-                    focalLength=240, alpha=0, beta=90, notes="", dimensions={}),
-               dict(id="B", flange="CF40", style="fixed-through", elevation=254,
-                    focalLength=240, alpha=120, beta=90, notes="", dimensions={})], notes="")
+def default_config():
+    """Read a fresh copy of the checked-in startup chamber in either runtime."""
+    path = Path(__file__).resolve().parent / "examples" / "Chamber" / "chamber-config.json"
+    config = json.loads(path.read_text(encoding="utf-8"))
+    validate_document(config)
+    return config
 
 
 def validate_document(config):

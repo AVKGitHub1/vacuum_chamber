@@ -39,7 +39,9 @@ python -m venv .venv
 .\.venv\Scripts\python.exe server.py
 ```
 
-The local Python application binds to `127.0.0.1`. Three.js and OrbitControls are included locally; after dependency installation, this mode requires no internet connection or Node.js. Both modes autosave in browser storage. Use **Save / Open** to transfer configurations between the local and hosted sites, which have separate browser storage.
+The local Python application binds to `127.0.0.1`. Three.js and OrbitControls are included locally; after dependency installation, this mode requires no internet connection or Node.js.
+
+Both modes automatically load [examples/Chamber/chamber-config.json](examples/Chamber/chamber-config.json) on every startup or page reload, taking precedence over the previous browser snapshot. **Reload startup** restores that same configuration. Use **Save** before leaving or reloading to keep edits as a JSON file, and **Open** to restore it. To change the startup chamber, edit that file; for GitHub Pages, commit and push it so the next build bundles the updated configuration.
 
 ## Configuration
 

@@ -46,6 +46,8 @@ for(const filename of ['chamber.py','fusion_export.py','service.py']){
 }
 await cp(path.join(root,'browser','manifold3d.py'),path.join(output,'python','manifold3d.py'));
 await cp(path.join(root,'data','catalog.json'),path.join(output,'data','catalog.json'));
+await mkdir(path.join(output,'examples','Chamber'),{recursive:true});
+await cp(path.join(root,'examples','Chamber','chamber-config.json'),path.join(output,'examples','Chamber','chamber-config.json'));
 
 await mkdir(path.join(output,'vendor','pyodide'),{recursive:true});
 for(const filename of ['pyodide.mjs','pyodide.asm.js','pyodide.asm.wasm','pyodide-lock.json','python_stdlib.zip']){

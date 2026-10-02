@@ -13,10 +13,11 @@ async function readResource(path) {
 
 async function initialize() {
   progress('Loading the browser geometry engine…');
-  const [{loadPyodide}, {default: ManifoldModule}, catalog, sources] = await Promise.all([
+  const [{loadPyodide}, {default: ManifoldModule}, catalog, startup, sources] = await Promise.all([
     import(resource('./vendor/pyodide/pyodide.mjs').href),
     import(resource('./vendor/manifold/manifold.js').href),
     readResource('./data/catalog.json'),
+    readResource('./examples/Chamber/chamber-config.json'),
     Promise.all(['manifold3d.py', 'chamber.py', 'fusion_export.py', 'service.py']
       .map(async name => [name, await readResource(`./python/${name}`)])),
   ]);
@@ -30,6 +31,8 @@ async function initialize() {
   progress('Preparing geometry calculations…');
   await pyodide.loadPackage('numpy');
   for (const [name, source] of sources) pyodide.FS.writeFile(`/home/pyodide/${name}`, source);
+  pyodide.FS.mkdirTree('/home/pyodide/examples/Chamber');
+  pyodide.FS.writeFile('/home/pyodide/examples/Chamber/chamber-config.json', startup);
   pyodide.globals.set('_catalog_json', catalog);
   pyodide.runPython(`
 import json
@@ -44,7 +47,7 @@ def _browser_request(path, serialized):
         if path == "/api/catalog":
             return json.dumps({"status": 200, "body": _catalog}, allow_nan=False)
         if path == "/api/default":
-            return json.dumps({"status": 200, "body": default_config(_catalog)}, allow_nan=False)
+            return json.dumps({"status": 200, "body": default_config()}, allow_nan=False)
         if path not in ("/api/evaluate", "/api/export"):
             return json.dumps({"status": 404, "body": {"error": "Not found"}})
         if not isinstance(serialized, str) or not 0 < len(serialized.encode("utf-8")) <= 1_000_000:
