@@ -7,7 +7,7 @@ import { initDimensionHelp, hideDimensionHelp } from './dimension-help.js';
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY='chamber-studio-v1';
 let catalog, config, evaluation=null, timer, version=0, activeRequest=null, firstView=true, renderer, scene, camera, controls, meshGroup, labelPoints=[], labels=[], selectedPorts=[];
-let renderFrame=null;
+let renderFrame=null,lastRenderTime=null;
 const viewport=$('#viewport');
 const dimensionFields=[['od','Flange OD'],['bore','Bore'],['thickness','Thickness'],['boltCircle','Bolt circle'],['holeDiameter','Hole diameter'],['holeCount','Hole count','count'],['sealInner','Seal inner Ø'],['sealOuter','Seal outer Ø'],['sealDepth','Recess depth']];
 const knifeFields=[['knifeEdgeDiameter','Knife circle Ø'],['knifeTipSetback','Knife setback'],['knifeHalfWidth','Knife half-width']];
@@ -103,11 +103,19 @@ function updateResults(){
 
 function requestSceneRender(){
   if(renderFrame!==null)return;
-  renderFrame=requestAnimationFrame(()=>{
+  renderFrame=requestAnimationFrame(time=>{
     renderFrame=null;
+    // Keep damping tied to elapsed time, including on slow software renderers.
+    // Restore the base factor for OrbitControls' updates during input events.
+    const damping=controls.dampingFactor;
+    const frames=lastRenderTime===null?1:(time-lastRenderTime)*60/1000;
+    lastRenderTime=time;
+    controls.dampingFactor=1-Math.pow(1-damping,frames);
     // OrbitControls emits change while damping is moving the camera, scheduling
     // the next frame. Once it settles, the static preview uses no draw loop.
-    controls.update();renderer.render(scene,camera);updateLabels();
+    controls.update();controls.dampingFactor=damping;
+    renderer.render(scene,camera);updateLabels();
+    if(renderFrame===null)lastRenderTime=null;
   });
 }
 function setupScene(){

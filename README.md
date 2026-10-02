@@ -17,7 +17,7 @@ All runtime assets are bundled with the site, including NumPy and both WebAssemb
 
 ### Build and preview the static site
 
-Install Node.js 22 or newer, then run:
+Install Node.js 22.12 or newer in the 22.x series, or Node.js 24 or newer, then run:
 
 ```sh
 npm ci
