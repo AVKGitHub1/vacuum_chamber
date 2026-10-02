@@ -7,6 +7,7 @@ import { initDimensionHelp, hideDimensionHelp } from './dimension-help.js';
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY='chamber-studio-v1';
 let catalog, config, evaluation=null, timer, version=0, activeRequest=null, firstView=true, renderer, scene, camera, controls, meshGroup, labelPoints=[], labels=[], selectedPorts=[];
+let renderFrame=null;
 const viewport=$('#viewport');
 const dimensionFields=[['od','Flange OD'],['bore','Bore'],['thickness','Thickness'],['boltCircle','Bolt circle'],['holeDiameter','Hole diameter'],['holeCount','Hole count','count'],['sealInner','Seal inner Ø'],['sealOuter','Seal outer Ø'],['sealDepth','Recess depth']];
 const knifeFields=[['knifeEdgeDiameter','Knife circle Ø'],['knifeTipSetback','Knife setback'],['knifeHalfWidth','Knife half-width']];
@@ -100,19 +101,29 @@ function updateResults(){
   updatePortStates();
 }
 
+function requestSceneRender(){
+  if(renderFrame!==null)return;
+  renderFrame=requestAnimationFrame(()=>{
+    renderFrame=null;
+    // OrbitControls emits change while damping is moving the camera, scheduling
+    // the next frame. Once it settles, the static preview uses no draw loop.
+    controls.update();renderer.render(scene,camera);updateLabels();
+  });
+}
 function setupScene(){
   try{
     renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0xedf2f4,0);renderer.outputColorSpace=THREE.SRGBColorSpace;
     viewport.prepend(renderer.domElement);scene=new THREE.Scene();
     camera=new THREE.PerspectiveCamera(35,1,0.1,20000);camera.up.set(0,0,1);camera.position.set(850,-1100,850);
     controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.minDistance=50;controls.maxDistance=10000;controls.target.set(0,0,254);
+    controls.addEventListener('change',requestSceneRender);
     scene.add(new THREE.HemisphereLight(0xf7fcff,0x7d9199,2.3));
     for(const [position,intensity] of [[[700,-600,1500],2.7],[[-600,300,600],1.3],[[0,800,1500],1.5]]){const light=new THREE.DirectionalLight(0xffffff,intensity);light.position.set(...position);scene.add(light);}
     const grid=new THREE.GridHelper(2600,52,0xb8cbd1,0xd9e3e6);grid.rotation.x=Math.PI/2;grid.position.z=-.7;grid.material.transparent=true;grid.material.opacity=.4;scene.add(grid);
     meshGroup=new THREE.Group();scene.add(meshGroup);
     const axes=new THREE.AxesHelper(100);axes.position.set(0,0,-.5);axes.material.transparent=true;axes.material.opacity=.65;scene.add(axes);
-    new ResizeObserver(()=>{const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}).observe(viewport);
-    renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);updateLabels();});
+    new ResizeObserver(()=>{const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();requestSceneRender();}).observe(viewport);
+    requestSceneRender();
   }catch(error){$('#webgl-error').hidden=false;$('#webgl-error').textContent='The 3D preview needs WebGL. Enable hardware acceleration in your browser, then reload. Configuration and export remain available. '+error.message;}
 }
 function updateMeshes(meshes){
@@ -133,6 +144,7 @@ function updateMeshes(meshes){
     const point=new THREE.Vector3(L*Math.sin(b)*Math.cos(a),L*Math.sin(b)*Math.sin(a),p.elevation+L*Math.cos(b));
     const label=document.createElement('span');label.className='port-label'+([...(evaluation?.collisions||[]),...(evaluation?.coincidences||[])].some(c=>c.ports.includes(p.id))?' bad':'');label.textContent=p.id;$('#port-labels').append(label);labels.push(label);labelPoints.push(point);
   }
+  requestSceneRender();
 }
 function updateLabels(){
   if(!camera)return;labelPoints.forEach((point,i)=>{const p=point.clone().project(camera);const visible=p.z>=-1&&p.z<=1&&Math.abs(p.x)<1&&Math.abs(p.y)<1;labels[i].style.display=visible?'block':'none';if(visible){labels[i].style.left=`${(p.x*.5+.5)*viewport.clientWidth}px`;labels[i].style.top=`${(-p.y*.5+.5)*viewport.clientHeight}px`;}});
@@ -142,13 +154,14 @@ function fitView(kind='3d'){
   const extent=Math.max(size.x,size.y,size.z),distance=extent/(2*Math.tan(camera.fov*Math.PI/360))*1.4/Math.min(1,camera.aspect);
   const dir=kind==='top'?new THREE.Vector3(0,-.001,1):kind==='front'?new THREE.Vector3(0,-1,.001):new THREE.Vector3(1.25,-1.8,1.05).normalize();
   controls.target.copy(center);camera.position.copy(center).addScaledVector(dir,distance);camera.near=Math.max(.1,extent/10000);camera.far=distance*20;camera.updateProjectionMatrix();controls.update();
+  requestSceneRender();
   document.querySelectorAll('.view-toolbar button').forEach(b=>b.classList.toggle('active',b.id===(kind==='3d'?'view-iso':'view-'+kind)));
 }
 function focusPorts(ids){
   selectedPorts=ids;
   document.querySelectorAll('.port-card').forEach(c=>{c.classList.remove('part-highlight');if(ids.includes(c.dataset.port)){c.classList.add('part-highlight');}});
   const first=[...document.querySelectorAll('.port-card')].find(c=>c.dataset.port===ids[0]);first?.scrollIntoView({behavior:'smooth',block:'center'});
-  if(!meshGroup)return;const box=new THREE.Box3();meshGroup.children.filter(m=>ids.includes(m.userData.portId)).forEach(m=>box.expandByObject(m));if(!box.isEmpty()){const center=box.getCenter(new THREE.Vector3()),offset=camera.position.clone().sub(controls.target);controls.target.copy(center);camera.position.copy(center).add(offset);}
+  if(!meshGroup)return;const box=new THREE.Box3();meshGroup.children.filter(m=>ids.includes(m.userData.portId)).forEach(m=>box.expandByObject(m));if(!box.isEmpty()){const center=box.getCenter(new THREE.Vector3()),offset=camera.position.clone().sub(controls.target);controls.target.copy(center);camera.position.copy(center).add(offset);controls.update();requestSceneRender();}
 }
 
 function download(data,name,type){const url=URL.createObjectURL(new Blob([data],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}

@@ -1,12 +1,14 @@
 import {getDimensionHelp} from './dimension-diagrams.js';
 import {escapeHTML as esc} from './state.js';
 
-let tooltip, active, showTimer, hideTimer, pinned=false, hovered=false;
+let tooltip, active, pendingButton, showTimer, hideTimer, pinned=false, hovered=false;
+let pointerX, pointerY;
 
 export function hideDimensionHelp() {
   clearTimeout(showTimer);
   clearTimeout(hideTimer);
   showTimer=hideTimer=null;
+  pendingButton=null;
   if(active){
     active.removeAttribute('aria-describedby');
     active.setAttribute('aria-expanded','false');
@@ -41,6 +43,7 @@ function showHelp(button) {
   clearTimeout(showTimer);
   clearTimeout(hideTimer);
   showTimer=hideTimer=null;
+  pendingButton=null;
   const help=getDimensionHelp(button.dataset.helpPath);
   if(!help)return;
   if(active!==button){hideDimensionHelp();active=button;}
@@ -56,6 +59,7 @@ function queueHide() {
   clearTimeout(showTimer);
   clearTimeout(hideTimer);
   showTimer=null;
+  pendingButton=null;
   hideTimer=setTimeout(()=>{
     hideTimer=null;
     if(!pinned&&!hovered&&document.activeElement!==active)hideDimensionHelp();
@@ -71,13 +75,19 @@ export function initDimensionHelp() {
   tooltip.hidden=true;
   document.body.append(tooltip);
 
-  document.addEventListener('pointerover',event=>{
+  document.addEventListener('pointermove',event=>{
     if(event.pointerType==='touch')return;
+    // Replacing or repositioning a field can emit pointerover without the user
+    // moving. Only actual movement should reopen a dismissed schematic.
+    if(event.clientX===pointerX&&event.clientY===pointerY)return;
+    pointerX=event.clientX;pointerY=event.clientY;
     const button=event.target.closest?.('.dimension-help');
-    if(!button||button.contains(event.relatedTarget))return;
+    if(!button)return;
     clearTimeout(hideTimer);
+    if(button===active||button===pendingButton)return;
     clearTimeout(showTimer);
-    showTimer=setTimeout(()=>{showTimer=null;if(button.isConnected)showHelp(button);},160);
+    pendingButton=button;
+    showTimer=setTimeout(()=>{showTimer=null;pendingButton=null;if(button.isConnected)showHelp(button);},160);
   });
   document.addEventListener('pointerout',event=>{
     const button=event.target.closest?.('.dimension-help');

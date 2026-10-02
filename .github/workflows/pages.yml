@@ -48,6 +48,14 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Test the static site under a repository subpath
         run: npm run test:pages
+      - name: Save browser failure screenshots and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Upload site
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3

@@ -30,29 +30,36 @@ async function expectSchematic(page, path) {
   return tooltip;
 }
 
-test('every numeric field explains its dimension, including both end and port profiles', async ({page}) => {
-  // Keep both sealing families represented while opening all advanced dimensions.
-  await page.locator('[data-path="body.top"]').selectOption('CF FXD');
-  await page.locator('[data-path="body.bottom"]').selectOption('ISO-F');
-  for (const details of await page.locator('details[data-detail]').all()) {
-    await details.locator('summary').click();
-  }
-  const fields = page.locator('.field input[type="number"]');
-  const paths = await fields.evaluateAll(inputs => inputs.map(input => input.dataset.path));
-  expect(paths).toContain('body.topSpec.knifeHalfWidth');
-  expect(paths).toContain('body.bottomSpec.sealDepth');
-  expect(paths).toContain('ports.0.dimensions.tubeWall');
-  for (const path of ['body.od', ...paths]) {
-    const control = page.locator(`[data-path="${path}"]`);
-    const help = helpFor(page, path);
-    await expect(help).toHaveAccessibleName(/^Explain /);
-    expect(await control.evaluate(input => Boolean(input.id
-      && [...input.labels].some(label => label.htmlFor === input.id))),
-    `The ${path} control keeps its label association`).toBe(true);
-    await expectSchematic(page, path);
-  }
-  await expect(page.locator('#dimension-tooltip')).toHaveCount(1);
-});
+// Keep exhaustive coverage in bounded groups: each field still receives a real
+// hover, without sharing one timeout across the entire long, scrollable form.
+for (const [name, prefix] of [['body and end flanges', 'body.'], ['port A', 'ports.0.'], ['port B', 'ports.1.']]) {
+  test(`every numeric field explains its dimension: ${name}`, async ({page}) => {
+    // Keep both sealing families represented while opening all advanced dimensions.
+    await page.locator('[data-path="body.top"]').selectOption('CF FXD');
+    await page.locator('[data-path="body.bottom"]').selectOption('ISO-F');
+    await expect(page.locator('#compute-state')).toHaveText('Up to date');
+    for (const details of await page.locator('details[data-detail]').all()) {
+      await details.locator('summary').click();
+    }
+    const fields = page.locator('.field input[type="number"]');
+    const paths = await fields.evaluateAll(inputs => inputs.map(input => input.dataset.path));
+    expect(paths).toContain('body.topSpec.knifeHalfWidth');
+    expect(paths).toContain('body.bottomSpec.sealDepth');
+    expect(paths).toContain('ports.0.dimensions.tubeWall');
+    for (const path of ['body.od', ...paths].filter(path => path.startsWith(prefix))) {
+      await test.step(path, async () => {
+        const control = page.locator(`[data-path="${path}"]`);
+        const help = helpFor(page, path);
+        await expect(help).toHaveAccessibleName(/^Explain /);
+        expect(await control.evaluate(input => Boolean(input.id
+          && [...input.labels].some(label => label.htmlFor === input.id))),
+        `The ${path} control keeps its label association`).toBe(true);
+        await expectSchematic(page, path);
+      });
+    }
+    await expect(page.locator('#dimension-tooltip')).toHaveCount(1);
+  });
+}
 
 test('placement schematics describe the same reference axes and faces used by the builder', async ({page}, testInfo) => {
   const examples = [
@@ -123,6 +130,9 @@ test('help survives units, new ports, profile changes, and field edits without a
   await expect(tooltipFor(page)).toBeHidden();
   await expectSchematic(page, 'ports.2.beta');
   await page.locator('[data-path="ports.2.flange"]').selectOption('ISO63F');
+  // DOM replacement can dispatch pointerover under a stationary cursor. Wait
+  // beyond the hover delay to verify dismissal lasts, not just its first frame.
+  await page.waitForTimeout(500);
   await expect(tooltipFor(page)).toBeHidden();
   await page.locator('.port-card').last().locator('details summary').click();
   await expectSchematic(page, 'ports.2.dimensions.sealDepth');
