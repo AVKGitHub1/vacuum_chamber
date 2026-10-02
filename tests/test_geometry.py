@@ -38,6 +38,30 @@ class ChamberTests(unittest.TestCase):
         self.assertAlmostEqual(d[1], math.sqrt(0.5))
         self.assertAlmostEqual(d[2], math.sqrt(0.5))
 
+    def test_focal_length_reaches_flange_face_from_focus_along_port_axis(self):
+        for alpha, beta, elevation, length in [(0, 90, 254, 270),
+                                                (180, 60, 190, 320),
+                                                (37, 110, 310, 330)]:
+            with self.subTest(alpha=alpha, beta=beta, elevation=elevation):
+                config = configuration()
+                placement = port("A", alpha=alpha, beta=beta, elevation=elevation, length=length)
+                config["ports"] = [placement]
+                result = evaluate(config, CATALOG)
+                self.assertEqual(result["errors"], [])
+                direction = port_direction(placement)
+                thickness = CATALOG["flanges"][0]["thickness"]
+                for kind in ("flange", "tube"):
+                    mesh = next(m for m in result["meshes"] if m["id"] == f"port-A-{kind}")
+                    vertices = zip(*[iter(mesh["positions"])] * 3)
+                    # Project the actual mesh onto the outward axis from the
+                    # focus at (0, 0, elevation), not from the chamber wall.
+                    distances = [sum((point[i] - (elevation if i == 2 else 0)) * direction[i]
+                                     for i in range(3)) for point in vertices]
+                    expected_end = length if kind == "flange" else length - thickness
+                    self.assertAlmostEqual(max(distances), expected_end, delta=1e-3)
+                    if kind == "flange":
+                        self.assertAlmostEqual(min(distances), length - thickness, delta=1e-3)
+
     def test_single_port_has_no_self_collisions_and_meshes_are_finite(self):
         result = evaluate(configuration(), CATALOG)
         self.assertEqual(result["errors"], [])

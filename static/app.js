@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { displayLength, canonicalLength, nextPortId, escapeHTML as esc, validateImport, suggestedEnd } from './state.js';
 import { apiFetch, isBrowserRuntime, onRuntimeProgress } from './api.js';
+import { initDimensionHelp, hideDimensionHelp } from './dimension-help.js';
 
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY='chamber-studio-v1';
@@ -13,12 +14,16 @@ const knifeFields=[['knifeEdgeDiameter','Knife circle Ø'],['knifeTipSetback','K
 function toast(message){const box=$('#toast');box.textContent=message;box.hidden=false;clearTimeout(box.timer);box.timer=setTimeout(()=>box.hidden=true,6500);}
 function pathValue(path){return path.split('.').reduce((o,k)=>o?.[k],config);}
 function setPath(path,value){const keys=path.split('.');let node=config;for(const key of keys.slice(0,-1)){node[key]??={};node=node[key];}node[keys.at(-1)]=value;}
+function numericFieldName(path,label,unit=''){
+  const id='field-'+path.replaceAll('.','-');
+  return `<span class="field-name"><button type="button" class="dimension-help" data-help-path="${esc(path)}" aria-label="Explain ${esc(label)}" aria-expanded="false">${esc(label)}${unit?` <em>${unit}</em>`:''} <span class="dimension-help-icon" aria-hidden="true">?</span></button></span><label class="visually-hidden" for="${esc(id)}">${esc(label)}${unit?' ('+esc(unit)+')':''}</label>`;
+}
 function numberField(path,label,{value=pathValue(path),kind='length',min,max}={}){
   const shown=kind==='length'?displayLength(value,config.units):(value??'');
   const unit=kind==='length'?config.units:kind==='angle'?'°':'';
-  return `<label class="field"><span>${esc(label)} <em>${unit}</em></span><input type="number" inputmode="decimal" data-path="${esc(path)}" data-kind="${kind}" value="${shown}" step="${kind==='count'?'1':'any'}" ${min!=null?`min="${min}"`:''} ${max!=null?`max="${max}"`:''} aria-label="${esc(label)}${unit?' ('+unit+')':''}"></label>`;
+  return `<div class="field">${numericFieldName(path,label,unit)}<input id="field-${esc(path.replaceAll('.','-'))}" type="number" inputmode="decimal" data-path="${esc(path)}" data-kind="${kind}" value="${shown}" step="${kind==='count'?'1':'any'}" ${min!=null?`min="${min}"`:''} ${max!=null?`max="${max}"`:''} aria-label="${esc(label)}${unit?' ('+unit+')':''}"></div>`;
 }
-function selectField(path,label,options,disabled=false){return `<label class="field"><span>${esc(label)}</span><select data-path="${esc(path)}" ${disabled?'disabled':''}>${options.map(o=>{const value=typeof o==='string'?o:o.id;const text=typeof o==='string'?o:o.label;return `<option value="${esc(value)}" ${pathValue(path)===value?'selected':''}>${esc(text)}</option>`;}).join('')}</select></label>`;}
+function selectField(path,label,options,disabled=false){const numeric=path==='body.od';return `<${numeric?'div':'label'} class="field">${numeric?numericFieldName(path,label):`<span>${esc(label)}</span>`}<select ${numeric?'id="field-body-od"':''} data-path="${esc(path)}" ${disabled?'disabled':''}>${options.map(o=>{const value=typeof o==='string'?o:o.id;const text=typeof o==='string'?o:o.label;return `<option value="${esc(value)}" ${pathValue(path)===value?'selected':''}>${esc(text)}</option>`;}).join('')}</select></${numeric?'div':'label'}>`;}
 function sourceNote(dims){const url=dims.source;let link='';try{if(url&&new URL(url).protocol==='https:')link=` <a href="${esc(url)}" target="_blank" rel="noopener">Dimension source ↗</a>`;}catch{}
   return `<p class="profile-note">${esc(dims.notes||'Editable custom profile. Confirm its dimensions.')} ${link}</p>`;
 }
@@ -43,6 +48,7 @@ function renderPorts(){
   }).join(''):'<p class="empty-ports">No ports yet. Add a port to begin placing connections.</p>';
 }
 function render(){
+  hideDimensionHelp();
   const open=new Set([...document.querySelectorAll('details[data-detail][open]')].map(d=>d.dataset.detail));
   renderBody();renderPorts();$('#notes').value=config.notes||'';
   document.querySelectorAll('[data-unit]').forEach(b=>b.classList.toggle('active',b.dataset.unit===config.units));
@@ -51,6 +57,7 @@ function render(){
 }
 function persist(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(config));$('#save-state').textContent='Saved in this browser';}catch{$('#save-state').textContent='Use Save to keep this configuration';}}
 function schedule(){
+  hideDimensionHelp();
   version++;evaluation=null;$('#export').disabled=true;$('#compute-state').textContent='Updating…';$('#compute-state').className='status-chip busy';
   $('#collision-summary').className='neutral';$('#collision-summary').innerHTML='<span class="icon">⋯</span><div><strong>Checking current configuration</strong><small>The previous preview remains visible while geometry updates.</small></div>';
   $('#collision-list').replaceChildren();$('#validation').replaceChildren();
@@ -190,7 +197,7 @@ async function start(){
   try{
     const responses=await Promise.all([apiFetch('/api/catalog'),apiFetch('/api/default')]);if(responses.some(r=>!r.ok))throw Error('Could not load chamber data.');[catalog,config]=await Promise.all(responses.map(r=>r.json()));
     try{const stored=localStorage.getItem(STORAGE_KEY);if(stored)config=validateImport(JSON.parse(stored));}catch{toast('The saved configuration could not be loaded. The example has been restored.');}
-    stopProgress();render();bindEvents();setupScene();schedule();
+    stopProgress();initDimensionHelp();render();bindEvents();setupScene();schedule();
   }catch(error){stopProgress();$('#compute-state').textContent=isBrowserRuntime?'Could not start':'Disconnected';$('#compute-state').className='status-chip bad';$('#validation').textContent=error.message+(isBrowserRuntime?(error.name==='GeometryRuntimeError'?'':' Check your connection and reload this page.'):' Start the local server and reload this page.');}
 }
 start();

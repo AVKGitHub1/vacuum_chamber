@@ -5,7 +5,7 @@ const baseURL = `http://127.0.0.1:${port}/vacuum_chamber/`;
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: 'pages.spec.mjs',
+  testMatch: ['pages.spec.mjs', 'dimension-help.spec.mjs'],
   fullyParallel: false,
   workers: 1,
   timeout: 180_000,
