@@ -45,7 +45,7 @@ Both modes automatically load [examples/Chamber/chamber-config.json](examples/Ch
 
 ## Configuration
 
-- Body OD choices: 12.75, 16, 20, 24, 30, 36 inches. Overall height is limited to 36 inches, as shown in the reference.
+- Body OD choices: 10, 12.75, 16, 20, 24, 30, 36 inches. Overall height is limited to 36 inches, as shown in the reference. ISO-F ends select the matching standard flange: ISO250F (10"), ISO320F (12.75"), ISO400F (16"), ISO500F (20") and ISO630F (24").
 - CF and ISO-F top/bottom flange rings; chamber ends stay open, with no covers or hardware.
 - CF and ISO-F port sizes, the four CF flange styles, focal elevation, focal length, alpha, beta, port notes and configuration notes.
 - Inch/mm display switch; saved geometry always uses millimeters.

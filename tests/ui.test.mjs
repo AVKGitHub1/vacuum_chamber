@@ -122,3 +122,12 @@ test('reload startup restores the checked-in chamber after edits',async()=>{
   assert.deepEqual(JSON.parse(localStorage.getItem('chamber-studio-v1')),startup);
   assert.equal(doc.querySelectorAll('.port-card').length,4);
 });
+test('ISO-F ends on the 10 in body use the ISO250F profile',async()=>{
+  assert.equal(doc.querySelector('[data-path="body.od"] option[value="254"]').textContent,'10 in');
+  change('[data-path="body.top"]','ISO-F');change('[data-path="body.bottom"]','ISO-F');change('[data-path="body.od"]',254);
+  const body=JSON.parse(localStorage.getItem('chamber-studio-v1')).body;
+  assert.equal(body.od,254);
+  assert.deepEqual([body.topSpec.id,body.bottomSpec.id],['end-ISO250F','end-ISO250F']);
+  await waitFor(()=>doc.querySelector('#compute-state').textContent==='Up to date');
+  assert.equal(doc.querySelector('#export').disabled,false);
+});

@@ -34,7 +34,7 @@ function profileFields(path,dims,family,port=false){
 }
 function renderBody(){
   const b=config.body;
-  const diameters=(catalog.bodyDiameters||[323.85,406.4,508,609.6,762,914.4]).map(d=>({id:String(d),label:`${displayLength(d,config.units)} ${config.units}`}));
+  const diameters=(catalog.bodyDiameters||[254,323.85,406.4,508,609.6,762,914.4]).map(d=>({id:String(d),label:`${displayLength(d,config.units)} ${config.units}`}));
   const old=b.od;b.od=String(b.od);
   const odSelect=selectField('body.od','Chamber body OD',diameters);b.od=old;
   $('#body-fields').innerHTML=`<div class="form-grid three">${odSelect}${numberField('body.height','Chamber height',{max:displayLength(914.4,config.units),min:0})}${numberField('body.wall','Wall thickness',{min:0})}</div><div class="body-divider"></div><div class="form-grid">${selectField('body.top','Chamber top',['ISO-F','CF FXD'])}${selectField('body.bottom','Chamber bottom',['ISO-F','CF FXD'])}</div><details class="advanced" data-detail="body"><summary>End-flange dimensions & sealing details</summary><p>Height is measured between the outward end faces. Wall thickness and unsourced seal sections are editable design assumptions.</p>${['top','bottom'].map(side=>`<h3 class="dim-title">${side==='top'?'Top':'Bottom'} · ${esc(b[side])}</h3>${sourceNote(b[side+'Spec'])}${profileFields('body.'+side+'Spec',b[side+'Spec'],b[side]==='CF FXD'?'CF':'ISO-F')}`).join('')}</details>`;

@@ -1092,6 +1092,7 @@
     }
   ],
   "bodyDiameters": [
+    254,
     323.85,
     406.4,
     508,
@@ -1100,6 +1101,7 @@
     914.4
   ],
   "bodyDiameterLabels": [
+    "10\"",
     "12.75\"",
     "16\"",
     "20\"",
@@ -1131,6 +1133,52 @@
     }
   ],
   "endProfiles": [
+    {
+      "id": "end-ISO250F",
+      "label": "ISO250 F end — 254 mm body",
+      "family": "ISO-F",
+      "od": 335,
+      "bore": 250.8,
+      "tubeOD": 254,
+      "tubeWall": 3.048,
+      "thickness": 16,
+      "boltCircle": 310,
+      "holeDiameter": 11,
+      "holeCount": 12,
+      "thread": null,
+      "threadDiameter": 0,
+      "threadPitch": 0,
+      "counterBore": 254.5,
+      "setback": null,
+      "sealInner": 250.8,
+      "sealOuter": 261.4,
+      "sealDepth": 2,
+      "knifeEdgeDiameter": 0,
+      "knifeTipSetback": 0,
+      "knifeHalfWidth": 0,
+      "centeringRecessDiameter": 261.4,
+      "verified": false,
+      "verifiedFields": [
+        "od",
+        "bore",
+        "tubeOD",
+        "thickness",
+        "boltCircle",
+        "holeDiameter",
+        "holeCount",
+        "counterBore"
+      ],
+      "provisionalFields": [
+        "tubeWall",
+        "sealInner",
+        "sealOuter",
+        "sealDepth"
+      ],
+      "source": "https://www.lesker.com/newweb/flanges/flanges_technicalnotes_iso_1.cfm",
+      "boreSource": "https://www.kl-advantorr.com/_i/assets/file/download/5820435c61b2dc9999369a699db7961e.pdf",
+      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional. End-ring bore follows the selected flange, independently of chamber wall thickness. Weld socket/ledge detail still requires the chosen part drawing.",
+      "bodyOD": 254
+    },
     {
       "id": "end-ISO320F",
       "label": "ISO320 F end — 323.85 mm body",
@@ -1424,7 +1472,7 @@
   },
   "missingData": [
     "Exact Lesker configurator dependencies beyond screenshots",
-    "CF end profiles for the six specified body diameters",
+    "CF end profiles for the seven specified body diameters",
     "ISO-F end profiles for 762 and 914.4 mm chamber bodies",
     "Fully dimensioned CF knife profile and rotatable insert shoulder",
     "Exact ISO-F centering recess / groove depth and profile",

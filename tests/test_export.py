@@ -13,6 +13,7 @@ from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import patch
 
+from chamber import evaluate
 from fusion_export import generate_script, prepare_export
 
 
@@ -21,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def fixture():
     catalog = json.loads((ROOT / "data" / "catalog.json").read_text(encoding="utf-8"))
-    end = copy.deepcopy(catalog["endProfiles"][0])
+    end = copy.deepcopy(next(p for p in catalog["endProfiles"] if p["id"] == "end-ISO320F"))
     config = {
         "schemaVersion": 1,
         "units": "in",
@@ -192,6 +193,19 @@ class ExportTests(unittest.TestCase):
         for flange in catalog["flanges"]:
             with self.subTest(flange=flange["id"]):
                 config["ports"][0]["flange"] = flange["id"]
+                compile(generate_script(config, catalog), "generated.py", "exec")
+
+    def test_every_catalog_end_profile_fits_an_offered_body_and_generates(self):
+        config, catalog = fixture()
+        for end in catalog["endProfiles"]:
+            with self.subTest(end=end["id"]):
+                self.assertIn(end["bodyOD"], catalog["bodyDiameters"])
+                body = config["body"]
+                body["od"] = end["bodyOD"]
+                body["top"] = body["bottom"] = "CF FXD" if end["family"] == "CF" else "ISO-F"
+                body["topSpec"], body["bottomSpec"] = copy.deepcopy(end), copy.deepcopy(end)
+                config["ports"][0]["focalLength"] = end["bodyOD"] / 2 + 80
+                self.assertEqual(evaluate(config, catalog, include_mesh=False)["errors"], [])
                 compile(generate_script(config, catalog), "generated.py", "exec")
 
     def test_rotatable_cf_and_tapped_exports_keep_requested_details(self):
