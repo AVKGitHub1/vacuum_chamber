@@ -259,7 +259,7 @@ const definitions = {
   },
   holeDiameter: {
     title: 'Bolt-hole diameter', view: 'Flange face with enlarged hole',
-    description: 'The diameter of one through bolt hole. On tapped CF flanges, the nominal thread diameter is used for the modeled hole instead.',
+    description: 'The diameter of one through bolt hole. On tapped CF and ISO-F flanges, the nominal thread diameter is used for the modeled hole instead.',
     draw: holeDiameter,
   },
   holeCount: {

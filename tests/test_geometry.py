@@ -14,7 +14,12 @@ CATALOG = {"flanges": [{"id": "CF40", "label": "CF40", "family": "CF", "od": 70.
     "boltCircle": 58.7, "holeDiameter": 6.5, "holeCount": 6,
     "sealInner": 36.0, "sealOuter": 47.0, "sealDepth": 1.2,
     "knifeEdgeDiameter": 41.9, "knifeHalfWidth": 0.5, "knifeTipSetback": 0.6,
-    "threadDiameter": 6.35, "threadPitch": 1.27, "verified": True}]}
+    "threadDiameter": 6.35, "threadPitch": 1.27, "verified": True},
+    {"id": "ISO100F", "label": "ISO100F", "family": "ISO-F", "od": 165.0,
+    "bore": 99.3, "tubeOD": 101.6, "tubeWall": 2.0, "thickness": 11.94,
+    "boltCircle": 145.0, "holeDiameter": 9.0, "holeCount": 8,
+    "sealInner": 99.3, "sealOuter": 102.7, "sealDepth": 2.0,
+    "thread": "M8x1.25", "threadDiameter": 8.0, "threadPitch": 1.25, "verified": True}]}
 
 
 def configuration():
@@ -193,6 +198,30 @@ class ChamberTests(unittest.TestCase):
         plain = flange_solid({**dims, "holeCount": 0, "sealDepth": 0}, "CF")
         self.assertGreater(plain.volume(), detailed.volume())
         self.assertGreater(detailed.volume(), 0)
+
+    def test_tapped_iso_port_previews_nominal_thread_holes(self):
+        dims = CATALOG["flanges"][1]
+        through = flange_solid(dims, "ISO-F", "fixed-through")
+        tapped = flange_solid(dims, "ISO-F", "fixed-tapped")
+        # M8 nominal holes remove less material than the 9 mm clearance holes.
+        self.assertGreater(tapped.volume(), through.volume())
+        config = configuration()
+        config["ports"] = [{**port("A"), "flange": "ISO100F", "style": "fixed-tapped"}]
+        result = evaluate(config, CATALOG)
+        self.assertEqual(result["errors"], [])
+        self.assertEqual(result["metrics"]["portCount"], 1)
+        self.assertTrue(any("Port A: preview holes show thread nominal envelopes" in w for w in result["warnings"]))
+
+    def test_iso_ports_reject_rotatable_styles_and_tapping_without_a_thread(self):
+        for style, overrides, key in [("rotatable-tapped", {}, "style"),
+                                      ("fixed-tapped", {"thread": None}, "dimensions.thread"),
+                                      ("fixed-tapped", {"threadDiameter": 0}, "dimensions.threadDiameter")]:
+            with self.subTest(style=style, overrides=overrides):
+                config = configuration()
+                config["ports"] = [{**port("A"), "flange": "ISO100F", "style": style, "dimensions": overrides}]
+                result = evaluate(config, CATALOG, include_mesh=False)
+                self.assertTrue(any(e["path"] == "ports.0." + key for e in result["errors"]))
+                self.assertEqual(result["metrics"]["portCount"], 0)
 
     def test_disconnected_tube_flange_overrides_are_rejected(self):
         for overrides, key in [({"tubeOD": 80}, "tubeOD"), ({"bore": 38}, "bore")]:

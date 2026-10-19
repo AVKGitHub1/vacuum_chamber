@@ -38,7 +38,9 @@ The result includes the shell, open end rings, port tubes and flanges, flange
 bolt patterns, and face sealing features. Rotatable CF selections create a
 separate bolt ring and stepped insert. These are bodies inside the new chamber
 component rather than a mechanical joint assembly. Tapped styles attempt native
-cosmetic thread features using the requested installed Fusion thread designation.
+cosmetic thread features using the requested installed Fusion thread designation:
+imperial UNC/UNF threads for CF and ISO metric coarse threads, such as `M8x1.25`,
+for ISO-F.
 If no exact designation or compatible face is found, the completion dialog
 explicitly reports that nominal-diameter holes remain without thread features.
 

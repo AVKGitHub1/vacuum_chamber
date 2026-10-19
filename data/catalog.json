@@ -652,9 +652,9 @@
       "boltCircle": 110,
       "holeDiameter": 9,
       "holeCount": 4,
-      "thread": null,
-      "threadDiameter": 0,
-      "threadPitch": 0,
+      "thread": "M8x1.25",
+      "threadDiameter": 8,
+      "threadPitch": 1.25,
       "counterBore": 63.8,
       "setback": null,
       "sealInner": 61.9,
@@ -673,7 +673,10 @@
         "boltCircle",
         "holeDiameter",
         "holeCount",
-        "counterBore"
+        "counterBore",
+        "thread",
+        "threadDiameter",
+        "threadPitch"
       ],
       "provisionalFields": [
         "tubeWall",
@@ -683,7 +686,8 @@
       ],
       "source": "https://www.lesker.com/newweb/flanges/flanges_technicalnotes_iso_1.cfm",
       "boreSource": "https://www.kl-advantorr.com/_i/assets/file/download/5820435c61b2dc9999369a699db7961e.pdf",
-      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional."
+      "threadSource": "https://www.lesker.com/newweb/flanges/hardware_iso_bolts.cfm?pgid=tapped",
+      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional. Tapped-style metric thread from Lesker's tapped ISO-F bolt-kit table."
     },
     {
       "id": "ISO80F",
@@ -697,9 +701,9 @@
       "boltCircle": 125,
       "holeDiameter": 9,
       "holeCount": 8,
-      "thread": null,
-      "threadDiameter": 0,
-      "threadPitch": 0,
+      "thread": "M8x1.25",
+      "threadDiameter": 8,
+      "threadPitch": 1.25,
       "counterBore": 76.5,
       "setback": null,
       "sealInner": 74.6,
@@ -718,7 +722,10 @@
         "boltCircle",
         "holeDiameter",
         "holeCount",
-        "counterBore"
+        "counterBore",
+        "thread",
+        "threadDiameter",
+        "threadPitch"
       ],
       "provisionalFields": [
         "tubeWall",
@@ -728,7 +735,8 @@
       ],
       "source": "https://www.lesker.com/newweb/flanges/flanges_technicalnotes_iso_1.cfm",
       "boreSource": "https://www.kl-advantorr.com/_i/assets/file/download/5820435c61b2dc9999369a699db7961e.pdf",
-      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional."
+      "threadSource": "https://www.lesker.com/newweb/flanges/hardware_iso_bolts.cfm?pgid=tapped",
+      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional. Tapped-style metric thread from Lesker's tapped ISO-F bolt-kit table."
     },
     {
       "id": "ISO100F",
@@ -742,9 +750,9 @@
       "boltCircle": 145,
       "holeDiameter": 9,
       "holeCount": 8,
-      "thread": null,
-      "threadDiameter": 0,
-      "threadPitch": 0,
+      "thread": "M8x1.25",
+      "threadDiameter": 8,
+      "threadPitch": 1.25,
       "counterBore": 101.9,
       "setback": null,
       "sealInner": 99.3,
@@ -763,7 +771,10 @@
         "boltCircle",
         "holeDiameter",
         "holeCount",
-        "counterBore"
+        "counterBore",
+        "thread",
+        "threadDiameter",
+        "threadPitch"
       ],
       "provisionalFields": [
         "tubeWall",
@@ -773,7 +784,8 @@
       ],
       "source": "https://www.lesker.com/newweb/flanges/flanges_technicalnotes_iso_1.cfm",
       "boreSource": "https://www.kl-advantorr.com/_i/assets/file/download/5820435c61b2dc9999369a699db7961e.pdf",
-      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional."
+      "threadSource": "https://www.lesker.com/newweb/flanges/hardware_iso_bolts.cfm?pgid=tapped",
+      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional. Tapped-style metric thread from Lesker's tapped ISO-F bolt-kit table."
     },
     {
       "id": "ISO160F",
@@ -787,9 +799,9 @@
       "boltCircle": 200,
       "holeDiameter": 11,
       "holeCount": 8,
-      "thread": null,
-      "threadDiameter": 0,
-      "threadPitch": 0,
+      "thread": "M10x1.5",
+      "threadDiameter": 10,
+      "threadPitch": 1.5,
       "counterBore": 152.9,
       "setback": null,
       "sealInner": 149.2,
@@ -808,7 +820,10 @@
         "boltCircle",
         "holeDiameter",
         "holeCount",
-        "counterBore"
+        "counterBore",
+        "thread",
+        "threadDiameter",
+        "threadPitch"
       ],
       "provisionalFields": [
         "tubeWall",
@@ -818,7 +833,8 @@
       ],
       "source": "https://www.lesker.com/newweb/flanges/flanges_technicalnotes_iso_1.cfm",
       "boreSource": "https://www.kl-advantorr.com/_i/assets/file/download/5820435c61b2dc9999369a699db7961e.pdf",
-      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional."
+      "threadSource": "https://www.lesker.com/newweb/flanges/hardware_iso_bolts.cfm?pgid=tapped",
+      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional. Tapped-style metric thread from Lesker's tapped ISO-F bolt-kit table."
     },
     {
       "id": "ISO200F",
@@ -832,9 +848,9 @@
       "boltCircle": 260,
       "holeDiameter": 11,
       "holeCount": 12,
-      "thread": null,
-      "threadDiameter": 0,
-      "threadPitch": 0,
+      "thread": "M10x1.5",
+      "threadDiameter": 10,
+      "threadPitch": 1.5,
       "counterBore": 203.7,
       "setback": null,
       "sealInner": 200,
@@ -853,7 +869,10 @@
         "boltCircle",
         "holeDiameter",
         "holeCount",
-        "counterBore"
+        "counterBore",
+        "thread",
+        "threadDiameter",
+        "threadPitch"
       ],
       "provisionalFields": [
         "tubeWall",
@@ -863,7 +882,8 @@
       ],
       "source": "https://www.lesker.com/newweb/flanges/flanges_technicalnotes_iso_1.cfm",
       "boreSource": "https://www.kl-advantorr.com/_i/assets/file/download/5820435c61b2dc9999369a699db7961e.pdf",
-      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional."
+      "threadSource": "https://www.lesker.com/newweb/flanges/hardware_iso_bolts.cfm?pgid=tapped",
+      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional. Tapped-style metric thread from Lesker's tapped ISO-F bolt-kit table."
     },
     {
       "id": "ISO250F",
@@ -877,9 +897,9 @@
       "boltCircle": 310,
       "holeDiameter": 11,
       "holeCount": 12,
-      "thread": null,
-      "threadDiameter": 0,
-      "threadPitch": 0,
+      "thread": "M10x1.5",
+      "threadDiameter": 10,
+      "threadPitch": 1.5,
       "counterBore": 254.5,
       "setback": null,
       "sealInner": 250.8,
@@ -898,7 +918,10 @@
         "boltCircle",
         "holeDiameter",
         "holeCount",
-        "counterBore"
+        "counterBore",
+        "thread",
+        "threadDiameter",
+        "threadPitch"
       ],
       "provisionalFields": [
         "tubeWall",
@@ -908,7 +931,8 @@
       ],
       "source": "https://www.lesker.com/newweb/flanges/flanges_technicalnotes_iso_1.cfm",
       "boreSource": "https://www.kl-advantorr.com/_i/assets/file/download/5820435c61b2dc9999369a699db7961e.pdf",
-      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional."
+      "threadSource": "https://www.lesker.com/newweb/flanges/hardware_iso_bolts.cfm?pgid=tapped",
+      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional. Tapped-style metric thread from Lesker's tapped ISO-F bolt-kit table."
     },
     {
       "id": "ISO320F",
@@ -922,9 +946,9 @@
       "boltCircle": 395,
       "holeDiameter": 14,
       "holeCount": 12,
-      "thread": null,
-      "threadDiameter": 0,
-      "threadPitch": 0,
+      "thread": "M12x1.75",
+      "threadDiameter": 12,
+      "threadPitch": 1.75,
       "counterBore": 324.358,
       "setback": null,
       "sealInner": 320.008,
@@ -943,7 +967,10 @@
         "boltCircle",
         "holeDiameter",
         "holeCount",
-        "counterBore"
+        "counterBore",
+        "thread",
+        "threadDiameter",
+        "threadPitch"
       ],
       "provisionalFields": [
         "tubeWall",
@@ -953,7 +980,8 @@
       ],
       "source": "https://www.lesker.com/newweb/flanges/flanges_technicalnotes_iso_1.cfm",
       "boreSource": "https://www.lesker.com/newweb/flanges/flanges_iso_f.cfm?pgid=iso320",
-      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Published centering recess diameter equals/undershoots bore; displayed annular groove dimensions are explicit provisional placeholders."
+      "threadSource": "https://www.lesker.com/newweb/flanges/hardware_iso_bolts.cfm?pgid=tapped",
+      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Published centering recess diameter equals/undershoots bore; displayed annular groove dimensions are explicit provisional placeholders. Tapped-style metric thread from Lesker's tapped ISO-F bolt-kit table."
     },
     {
       "id": "ISO400F",
@@ -967,9 +995,9 @@
       "boltCircle": 480,
       "holeDiameter": 14,
       "holeCount": 16,
-      "thread": null,
-      "threadDiameter": 0,
-      "threadPitch": 0,
+      "thread": "M12x1.75",
+      "threadDiameter": 12,
+      "threadPitch": 1.75,
       "counterBore": 406.908,
       "setback": null,
       "sealInner": 396.748,
@@ -988,7 +1016,10 @@
         "boltCircle",
         "holeDiameter",
         "holeCount",
-        "counterBore"
+        "counterBore",
+        "thread",
+        "threadDiameter",
+        "threadPitch"
       ],
       "provisionalFields": [
         "tubeWall",
@@ -998,7 +1029,8 @@
       ],
       "source": "https://www.lesker.com/newweb/flanges/flanges_technicalnotes_iso_1.cfm",
       "boreSource": "https://www.lesker.com/newweb/flanges/flanges_iso_f.cfm?pgid=iso400",
-      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional."
+      "threadSource": "https://www.lesker.com/newweb/flanges/hardware_iso_bolts.cfm?pgid=tapped",
+      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional. Tapped-style metric thread from Lesker's tapped ISO-F bolt-kit table."
     },
     {
       "id": "ISO500F",
@@ -1012,9 +1044,9 @@
       "boltCircle": 580,
       "holeDiameter": 14,
       "holeCount": 16,
-      "thread": null,
-      "threadDiameter": 0,
-      "threadPitch": 0,
+      "thread": "M12x1.75",
+      "threadDiameter": 12,
+      "threadPitch": 1.75,
       "counterBore": 508.5,
       "setback": null,
       "sealInner": 498.4,
@@ -1033,7 +1065,10 @@
         "boltCircle",
         "holeDiameter",
         "holeCount",
-        "counterBore"
+        "counterBore",
+        "thread",
+        "threadDiameter",
+        "threadPitch"
       ],
       "provisionalFields": [
         "tubeWall",
@@ -1043,7 +1078,8 @@
       ],
       "source": "https://www.lesker.com/newweb/flanges/flanges_technicalnotes_iso_1.cfm",
       "boreSource": "https://www.kl-advantorr.com/_i/assets/file/download/5820435c61b2dc9999369a699db7961e.pdf",
-      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional."
+      "threadSource": "https://www.lesker.com/newweb/flanges/hardware_iso_bolts.cfm?pgid=tapped",
+      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional. Tapped-style metric thread from Lesker's tapped ISO-F bolt-kit table."
     },
     {
       "id": "ISO630F",
@@ -1057,9 +1093,9 @@
       "boltCircle": 720,
       "holeDiameter": 14,
       "holeCount": 20,
-      "thread": null,
-      "threadDiameter": 0,
-      "threadPitch": 0,
+      "thread": "M12x1.75",
+      "threadDiameter": 12,
+      "threadPitch": 1.75,
       "counterBore": 610.1,
       "setback": null,
       "sealInner": 604.8,
@@ -1078,7 +1114,10 @@
         "boltCircle",
         "holeDiameter",
         "holeCount",
-        "counterBore"
+        "counterBore",
+        "thread",
+        "threadDiameter",
+        "threadPitch"
       ],
       "provisionalFields": [
         "tubeWall",
@@ -1088,7 +1127,8 @@
       ],
       "source": "https://www.lesker.com/newweb/flanges/flanges_technicalnotes_iso_1.cfm",
       "boreSource": "https://www.kl-advantorr.com/_i/assets/file/download/5820435c61b2dc9999369a699db7961e.pdf",
-      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional."
+      "threadSource": "https://www.idealvac.com/en-us/ISO-F-DN-630-Tapped-M12-x-175-Weld-On-Bulkhead-Flange-For-ISO-F-Bolted-or-ISO-K-Claw-Clamp-Style-Flanges-Stainless-Steel/pp/P1013036",
+      "notes": "Lesker ISO-F nominal interface dimensions; selected bored-flange dimensions from listed boreSource (AdvanTorr PDF page 147 / PDF index 81 for remaining sizes). Tube wall and modeled face recess depth are editable assumptions, not a fully dimensioned sealing profile. Face recess outer diameter uses the published centering recess value; the seal depth is provisional. Tapped-style metric thread from a DN630 tapped weld-on flange listing; Lesker's tapped ISO-F bolt-kit table stops at ISO500."
     }
   ],
   "bodyDiameters": [
@@ -1130,6 +1170,16 @@
     {
       "id": "rotatable-tapped",
       "label": "Rotatable, Tapped"
+    }
+  ],
+  "isoStyles": [
+    {
+      "id": "fixed-through",
+      "label": "Fixed, Through-hole"
+    },
+    {
+      "id": "fixed-tapped",
+      "label": "Fixed, Tapped"
     }
   ],
   "endProfiles": [

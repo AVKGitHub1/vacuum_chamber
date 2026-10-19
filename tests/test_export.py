@@ -219,6 +219,63 @@ class ExportTests(unittest.TestCase):
         self.assertTrue(any("rotatable" in w for w in result["exportWarnings"]))
         self.assertTrue(any("knife" in w for w in result["exportWarnings"]))
 
+    def test_every_iso_flange_exports_a_tapped_metric_pattern(self):
+        config, catalog = fixture()
+        config["ports"][0]["style"] = "fixed-tapped"
+        for flange in (f for f in catalog["flanges"] if f["family"] == "ISO-F"):
+            with self.subTest(flange=flange["id"]):
+                config["ports"][0]["flange"] = flange["id"]
+                self.assertEqual(flange["thread"], f"M{flange['threadDiameter']:g}x{flange['threadPitch']:g}")
+                self.assertLess(flange["threadDiameter"], flange["holeDiameter"])
+                self.assertIn("thread", flange["verifiedFields"])
+                self.assertTrue(flange["threadSource"].startswith("https://"))
+                d = prepare_export(config, catalog)["ports"][0]["dimensions"]
+                self.assertEqual((d["thread"], d["threadDiameter"]), (flange["thread"], flange["threadDiameter"]))
+                compile(generate_script(config, catalog), "generated.py", "exec")
+
+    def test_iso_tapped_holes_match_the_coarse_metric_fusion_thread(self):
+        config, catalog = fixture()
+        config["ports"][0].update(flange="ISO100F", style="fixed-tapped")
+        runtime = load_runtime(config, catalog)
+        adsk = runtime["adsk"]
+
+        class Query:
+            allThreadTypes = ["ANSI Unified Screw Threads", "ISO Metric profile"]
+
+            def allSizes(self, thread_type):
+                return ["8", "10"] if "Metric" in thread_type else ["1/4"]
+
+            def allDesignations(self, thread_type, size):
+                return {"8": ["M8x1", "M8x1.25"], "10": ["M10x1.5"]}.get(size, ["1/4-28 UNF"])
+
+            def allClasses(self, internal, thread_type, designation):
+                return ["6H"]
+
+        class Cylinder:
+            def __init__(self, radius):
+                self.radius = radius
+
+        adsk.fusion.ThreadDataQuery = SimpleNamespace(create=lambda modeled: Query())
+        adsk.fusion.ThreadInfo = SimpleNamespace(create=lambda *args: args)
+        adsk.core.Cylinder = SimpleNamespace(cast=lambda g: g if isinstance(g, Cylinder) else None)
+        added = []
+        threads = SimpleNamespace(createInput=lambda faces, info: SimpleNamespace(faces=faces, info=info),
+                                  add=lambda inp: added.append(inp) or SimpleNamespace(name=""))
+        builder = runtime["ChamberBuilder"].__new__(runtime["ChamberBuilder"])
+        builder.comp = SimpleNamespace(features=SimpleNamespace(threadFeatures=threads))
+        builder.collection = list
+        builder.warnings = []
+        dims = prepare_export(config, catalog)["ports"][0]["dimensions"]
+        # Fusion reports radii in cm: eight M8 holes plus unrelated bore faces.
+        faces = [SimpleNamespace(geometry=Cylinder(0.4)) for _ in range(dims["holeCount"])]
+        faces += [SimpleNamespace(geometry=Cylinder(dims["bore"] / 20)), SimpleNamespace(geometry=None)]
+        builder.add_threads(SimpleNamespace(faces=faces), dims, "Port A")
+        self.assertEqual(builder.warnings, [])
+        self.assertEqual(len(added), 1)
+        self.assertEqual(added[0].info[2:5], ("ISO Metric profile", "M8x1.25", "6H"))
+        self.assertEqual(len(added[0].faces), dims["holeCount"])
+        self.assertFalse(added[0].isModeled)
+
     def test_rejects_missing_flange_dimensions(self):
         config, catalog = fixture()
         del config["body"]["topSpec"]

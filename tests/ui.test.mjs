@@ -76,10 +76,16 @@ test('invalid angle blocks export and correction clears the validation',async()=
   assert.equal(doc.querySelector('#export').disabled,true);assert.match(doc.querySelector('#validation').textContent,/45/);
   change('[data-path="ports.0.beta"]',90);await waitFor(()=>doc.querySelector('#compute-state').textContent==='Up to date');
 });
-test('switching to ISO-F hides CF styles and produces a valid standard profile',async()=>{
+test('switching to ISO-F offers only fixed styles and a tapped port stays valid',async()=>{
   change('[data-path="ports.0.flange"]','ISO63F');
   await waitFor(()=>doc.querySelector('#compute-state').textContent==='Up to date');
-  assert.equal(doc.querySelector('[data-path="ports.0.style"]'),null);
+  const style=doc.querySelector('[data-path="ports.0.style"]');
+  assert.deepEqual([...style.options].map(o=>o.value),['fixed-through','fixed-tapped']);
+  assert.equal(style.value,'fixed-through');
+  change('[data-path="ports.0.style"]','fixed-tapped');
+  await waitFor(()=>doc.querySelector('#compute-state').textContent==='Up to date');
+  assert.match(doc.querySelector('.port-card').textContent,/Metric threads on tapped flanges: M8x1\.25/);
+  assert.match(doc.querySelector('#warnings').textContent,/Port A: preview holes show thread nominal envelopes/);
   assert.equal(doc.querySelector('#export').disabled,false);
 });
 

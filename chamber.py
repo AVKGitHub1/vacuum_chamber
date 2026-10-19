@@ -21,6 +21,7 @@ VOLUME_EPSILON = 1e-5  # mm³; touching faces have no interference volume.
 COINCIDENT_POSITION_EPSILON = 1e-5  # mm; numerical tolerance, not a clearance.
 COINCIDENT_DIRECTION_EPSILON = 1e-8  # Difference between unit direction vectors.
 CF_STYLES = {"fixed-through", "fixed-tapped", "rotatable-through", "rotatable-tapped"}
+ISO_STYLES = {"fixed-through", "fixed-tapped"}
 END_TYPES = {"CF FXD", "ISO-F"}
 
 
@@ -121,6 +122,11 @@ def validate_config(config: dict, catalog: Any) -> dict:
                     error(f"{path}.sealOuter", "The sealing recess must stay inside the bolt-hole inner edges.")
                 if _number(dims.get("od")) and dims["boltCircle"] + hole_diameter >= dims["od"]:
                     error(f"{path}.holeDiameter", "The selected hole or thread diameter extends beyond the flange outside edge.")
+        if "tapped" in style:
+            if not isinstance(dims.get("thread"), str) or not dims["thread"].strip():
+                error(f"{path}.thread", "Tapped holes need a thread designation.")
+            if not _number(dims.get("threadDiameter")) or dims["threadDiameter"] <= 0:
+                error(f"{path}.threadDiameter", "Tapped holes need a positive thread diameter.")
         if all(_number(dims.get(k)) for k in ("bore", "od")) and dims["bore"] >= dims["od"]:
             error(f"{path}.bore", "Flange bore must be smaller than its outside diameter.")
         if not end and all(_number(dims.get(k)) for k in ("tubeOD", "tubeWall")) and dims["tubeWall"] * 2 >= dims["tubeOD"]:
@@ -204,6 +210,8 @@ def validate_config(config: dict, catalog: Any) -> dict:
             error(path + ".flange", "Only CF and ISO-F ports are supported.")
         if family == "CF" and port.get("style") not in CF_STYLES:
             error(path + ".style", "Select a fixed or rotatable CF flange with through or tapped holes.")
+        if family == "ISO-F" and port.get("style", "fixed-through") not in ISO_STYLES:
+            error(path + ".style", "Select a fixed ISO-F flange with through or tapped holes.")
         dimensions(dims, path + ".dimensions", family=family, style=port.get("style", "fixed-through"))
         for key in ("elevation", "focalLength", "alpha", "beta"):
             if not _number(port.get(key)):
@@ -228,7 +236,7 @@ def validate_config(config: dict, catalog: Any) -> dict:
                 error(path + ".focalLength", "Focal length is too short: the flange rear face intersects the chamber body.")
         if dims.get("verified") is False or dims.get("sealVerified") is False:
             warnings.append(f"Port {port_id}: some flange/seal dimensions are provisional; inspect the source and editable dimensions.")
-        if family == "CF" and "tapped" in port.get("style", ""):
+        if "tapped" in port.get("style", ""):
             warnings.append(f"Port {port_id}: preview holes show thread nominal envelopes; editable Fusion threads are created on export.")
         if family == "CF" and "rotatable" in port.get("style", ""):
             warnings.append(f"Port {port_id}: the rotatable insert shoulder uses editable provisional dimensions; preview interference uses its combined solid envelope.")
