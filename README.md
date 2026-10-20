@@ -49,6 +49,10 @@ Both modes automatically load [examples/Chamber/chamber-config.json](examples/Ch
 - CF and ISO-F top/bottom flange rings; chamber ends stay open, with no covers or hardware.
 - CF and ISO-F port sizes, the four CF flange styles, fixed ISO-F through-hole or tapped (metric thread) styles, focal elevation, focal length, alpha, beta, port notes and configuration notes.
 - Inch/mm display switch; saved geometry always uses millimeters.
+- Port letters: pick a new letter from the letter menu on a port card. Choosing a letter another port already uses swaps the two ports' letters.
+- Port order: drag a port card by its handle, or focus the handle and press the up or down arrow key. Ports keep their letters when they move.
+- Port notes appear beside the port letter on the 3D preview labels; long notes are shortened there but saved in full.
+- Saved JSON files keep the same `schemaVersion: 1` format, so files saved by earlier versions open unchanged, including port identifiers that are not letters.
 - Editable body wall and advanced flange dimensions. Catalog-backed values and provisional detail profiles are identified in the interface and [source notes](docs/catalog-sources.md).
 - Schematic guides for every numeric field, including the body-diameter selector. Click or tap the **?** beside the field title to see the measured dimension, or focus the question-mark button and press Enter or Space. Click it again, press Escape, or click outside to dismiss the guide.
 

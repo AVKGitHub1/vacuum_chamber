@@ -1,7 +1,7 @@
 // Real Chromium, dedicated Worker, Python and Manifold WASM, and WebGL.
 // All application traffic must stay on a static GitHub project-style subpath.
 import {test as base, expect} from '@playwright/test';
-import {readFile} from 'node:fs/promises';
+import {readFile, writeFile} from 'node:fs/promises';
 
 const startup = JSON.parse(await readFile(new URL('../examples/Chamber/chamber-config.json', import.meta.url), 'utf8'));
 
@@ -131,6 +131,50 @@ test('invalid dimensions block export, and correction restores it', async ({page
   await expect(page.locator('#compute-state')).toHaveText('Up to date');
   await expect(page.locator('#validation')).toBeEmpty();
   await expect(page.locator('#export')).toBeEnabled();
+});
+
+test('dragged ports keep their letters, letters swap, and notes label the 3D preview', async ({page}) => {
+  // Show every port card at once so the pointer drag needs no scrolling.
+  await page.setViewportSize({width: 1400, height: 2000});
+  const ids = async () => (await page.evaluate(() => JSON.parse(localStorage.getItem('chamber-studio-v1')))).ports.map(p => p.id);
+  const handle = await page.locator('[data-drag="3"]').boundingBox();
+  const first = await page.locator('.port-card').first().boundingBox();
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(first.x + 40, first.y + 10, {steps: 10});
+  await expect(page.locator('.port-card.drop-before')).toHaveCount(1);
+  await expect(page.locator('.port-card.dragging')).toHaveAttribute('data-port', 'D');
+  await page.mouse.up();
+  expect(await ids()).toEqual(['D', 'A', 'B', 'C']);
+  await expect(page.locator('.port-card.dragging, .port-card.drop-before, .port-card.drop-after')).toHaveCount(0);
+  await expect(page.locator('#compute-state')).toHaveText('Up to date');
+  await expect(page.locator('#port-labels .port-label')).toHaveText(['D', 'A', 'B', 'C']);
+
+  await page.locator('[data-port-letter="0"]').selectOption('A');
+  expect(await ids()).toEqual(['A', 'D', 'B', 'C']);
+  await expect(page.locator('#compute-state')).toHaveText('Up to date');
+  await expect(page.locator('#port-labels .port-label')).toHaveText(['A', 'D', 'B', 'C']);
+
+  await page.locator('[data-path="ports.0.notes"]').fill('Turbo pump');
+  await expect(page.locator('#port-labels .port-label').first()).toHaveText('A · Turbo pump');
+  await expect(page.locator('#compute-state')).toHaveText('Up to date');
+  await expect(page.locator('#export')).toBeEnabled();
+});
+
+test('older saved files open and save back unchanged, including non-letter port identifiers', async ({page}, testInfo) => {
+  const legacy = structuredClone(startup);
+  legacy.ports[1].id = 'Turbo';
+  delete legacy.ports[2].notes;
+  const filename = testInfo.outputPath('legacy-chamber.json');
+  await writeFile(filename, JSON.stringify(legacy));
+  await page.locator('#open-file').setInputFiles(filename);
+  await expect(page.locator('[data-port-letter="1"]')).toHaveValue('Turbo');
+  await expect(page.locator('#compute-state')).toHaveText('Up to date');
+  await expect(page.locator('#port-labels .port-label')).toHaveText(['A', 'Turbo', 'C', 'D']);
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#save').click();
+  const download = await downloadPromise;
+  expect(JSON.parse(await readFile(await download.path(), 'utf8'))).toEqual(legacy);
 });
 
 test('save and open exchange portable millimeter configurations', async ({page}) => {

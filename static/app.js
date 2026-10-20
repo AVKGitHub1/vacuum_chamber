@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
-import { displayLength, canonicalLength, nextPortId, escapeHTML as esc, validateImport, suggestedEnd } from './state.js';
+import { displayLength, canonicalLength, nextPortId, portLabel, escapeHTML as esc, validateImport, suggestedEnd } from './state.js';
 import { apiFetch, isBrowserRuntime, onRuntimeProgress } from './api.js';
 import { initDimensionHelp, hideDimensionHelp } from './dimension-help.js';
 
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY='chamber-studio-v1';
 let catalog, config, evaluation=null, timer, version=0, activeRequest=null, firstView=true, renderer, scene, camera, controls, meshGroup, labelPoints=[], labels=[], selectedPorts=[];
-let renderFrame=null,lastRenderTime=null;
+let renderFrame=null,lastRenderTime=null,drag=null;
 const viewport=$('#viewport');
 const dimensionFields=[['od','Flange OD'],['bore','Bore'],['thickness','Thickness'],['boltCircle','Bolt circle'],['holeDiameter','Hole diameter'],['holeCount','Hole count','count'],['sealInner','Seal inner Ø'],['sealOuter','Seal outer Ø'],['sealDepth','Recess depth']];
 const knifeFields=[['knifeEdgeDiameter','Knife circle Ø'],['knifeTipSetback','Knife setback'],['knifeHalfWidth','Knife half-width']];
@@ -40,12 +40,19 @@ function renderBody(){
   $('#body-fields').innerHTML=`<div class="form-grid three">${odSelect}${numberField('body.height','Chamber height',{max:displayLength(914.4,config.units),min:0})}${numberField('body.wall','Wall thickness',{min:0})}</div><div class="body-divider"></div><div class="form-grid">${selectField('body.top','Chamber top',['ISO-F','CF FXD'])}${selectField('body.bottom','Chamber bottom',['ISO-F','CF FXD'])}</div><details class="advanced" data-detail="body"><summary>End-flange dimensions & sealing details</summary><p>Height is measured between the outward end faces. Wall thickness and unsourced seal sections are editable design assumptions.</p>${['top','bottom'].map(side=>`<h3 class="dim-title">${side==='top'?'Top':'Bottom'} · ${esc(b[side])}</h3>${sourceNote(b[side+'Spec'])}${profileFields('body.'+side+'Spec',b[side+'Spec'],b[side]==='CF FXD'?'CF':'ISO-F')}`).join('')}</details>`;
 }
 function flangeFor(port){return {...catalog.flanges.find(f=>f.id===port.flange),...port.dimensions};}
+function letterOptions(port){
+  const used=new Set(config.ports.map(p=>p.id));
+  // Older files can use identifiers other than letters; keep them selectable.
+  const choices=[...new Set([...Array.from({length:Math.max(26,config.ports.length)},(_,i)=>portLabel(i)),...used])];
+  return choices.map(id=>`<option value="${esc(id)}" ${id===port.id?'selected':''}>${esc(id)}${id!==port.id&&used.has(id)?' (swap)':''}</option>`).join('');
+}
+const DRAG_ICON='<svg viewBox="0 0 8 12" aria-hidden="true"><circle cx="2" cy="2" r="1.1"/><circle cx="6" cy="2" r="1.1"/><circle cx="2" cy="6" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="2" cy="10" r="1.1"/><circle cx="6" cy="10" r="1.1"/></svg>';
 function renderPorts(){
   $('#port-count').textContent=config.ports.length;
   $('#add-port').disabled=config.ports.length>=32;
   $('#ports').innerHTML=config.ports.length?config.ports.map((port,i)=>{
     const path=`ports.${i}`, dims=flangeFor(port);
-    return `<article class="port-card" data-port="${esc(port.id)}"><div class="port-heading"><span class="port-id">${esc(port.id)}</span><span class="port-name">Port ${esc(port.id)}</span><span class="port-state">Ready</span><button class="duplicate-port" data-duplicate="${i}" title="Duplicate port ${esc(port.id)}">Duplicate</button><button data-remove="${i}" aria-label="Remove port ${esc(port.id)}">×</button></div><div class="port-fields"><div class="form-grid">${selectField(path+'.flange','Flange type',catalog.flanges.map(f=>({id:f.id,label:f.label})))}${dims.family==='CF'?selectField(path+'.style','CF flange style',catalog.cfStyles||[{id:'fixed-through',label:'Fixed, Through-hole'},{id:'fixed-tapped',label:'Fixed, Tapped'},{id:'rotatable-through',label:'Rotatable, Through-hole'},{id:'rotatable-tapped',label:'Rotatable, Tapped'}]):selectField(path+'.style','ISO-F flange style',catalog.isoStyles||[{id:'fixed-through',label:'Fixed, Through-hole'},{id:'fixed-tapped',label:'Fixed, Tapped'}])}</div><div class="angles">${numberField(path+'.elevation','Focal pt. elevation')}${numberField(path+'.focalLength','Focal length')}${numberField(path+'.alpha','Alpha',{kind:'angle',min:0,max:360})}${numberField(path+'.beta','Beta',{kind:'angle',min:45,max:135})}</div><label class="field port-notes"><input data-path="${path}.notes" value="${esc(port.notes)}" aria-label="Port ${esc(port.id)} notes" placeholder="Port use / notes"></label><details class="advanced" data-detail="port-${esc(port.id)}"><summary>Flange dimensions & sealing details</summary>${sourceNote(dims)}${profileFields(path+'.dimensions',dims,dims.family,true)}<p>${dims.family==='CF'?'Imperial':'Metric'} threads on tapped flanges: ${esc(dims.thread||'custom')}. Thread preview uses the nominal envelope.</p></details></div></article>`;
+    return `<article class="port-card" data-port="${esc(port.id)}"><div class="port-heading"><button type="button" class="drag-handle" data-drag="${i}" title="Drag to reorder" aria-label="Reorder port ${esc(port.id)}: drag, or press the up or down arrow key">${DRAG_ICON}</button><select class="port-id" data-port-letter="${i}" title="Reassign port letter" aria-label="Port ${esc(port.id)} letter">${letterOptions(port)}</select><span class="port-name">Port ${esc(port.id)}</span><span class="port-state">Ready</span><button class="duplicate-port" data-duplicate="${i}" title="Duplicate port ${esc(port.id)}">Duplicate</button><button data-remove="${i}" aria-label="Remove port ${esc(port.id)}">×</button></div><div class="port-fields"><div class="form-grid">${selectField(path+'.flange','Flange type',catalog.flanges.map(f=>({id:f.id,label:f.label})))}${dims.family==='CF'?selectField(path+'.style','CF flange style',catalog.cfStyles||[{id:'fixed-through',label:'Fixed, Through-hole'},{id:'fixed-tapped',label:'Fixed, Tapped'},{id:'rotatable-through',label:'Rotatable, Through-hole'},{id:'rotatable-tapped',label:'Rotatable, Tapped'}]):selectField(path+'.style','ISO-F flange style',catalog.isoStyles||[{id:'fixed-through',label:'Fixed, Through-hole'},{id:'fixed-tapped',label:'Fixed, Tapped'}])}</div><div class="angles">${numberField(path+'.elevation','Focal pt. elevation')}${numberField(path+'.focalLength','Focal length')}${numberField(path+'.alpha','Alpha',{kind:'angle',min:0,max:360})}${numberField(path+'.beta','Beta',{kind:'angle',min:45,max:135})}</div><label class="field port-notes"><input data-path="${path}.notes" value="${esc(port.notes)}" aria-label="Port ${esc(port.id)} notes" placeholder="Port use / notes"></label><details class="advanced" data-detail="port-${esc(port.id)}"><summary>Flange dimensions & sealing details</summary>${sourceNote(dims)}${profileFields(path+'.dimensions',dims,dims.family,true)}<p>${dims.family==='CF'?'Imperial':'Metric'} threads on tapped flanges: ${esc(dims.thread||'custom')}. Thread preview uses the nominal envelope.</p></details></div></article>`;
   }).join(''):'<p class="empty-ports">No ports yet. Add a port to begin placing connections.</p>';
 }
 function render(){
@@ -134,6 +141,11 @@ function setupScene(){
     requestSceneRender();
   }catch(error){$('#webgl-error').hidden=false;$('#webgl-error').textContent='The 3D preview needs WebGL. Enable hardware acceleration in your browser, then reload. Configuration and export remain available. '+error.message;}
 }
+function setLabelText(label,port){
+  const note=String(port.notes??'').trim();
+  label.replaceChildren(port.id);
+  if(note){const text=document.createElement('span');text.className='port-label-note';text.textContent=note;label.append(' · ',text);}
+}
 function updateMeshes(meshes){
   if(!meshGroup)return;
   while(meshGroup.children.length){const obj=meshGroup.children[0];obj.traverse(child=>{child.geometry?.dispose();if(child.material)child.material.dispose();});meshGroup.remove(obj);}
@@ -150,7 +162,7 @@ function updateMeshes(meshes){
     if(!meshes.some(m=>m.portId===p.id))continue;
     const a=p.alpha*Math.PI/180,b=p.beta*Math.PI/180,L=p.focalLength;
     const point=new THREE.Vector3(L*Math.sin(b)*Math.cos(a),L*Math.sin(b)*Math.sin(a),p.elevation+L*Math.cos(b));
-    const label=document.createElement('span');label.className='port-label'+([...(evaluation?.collisions||[]),...(evaluation?.coincidences||[])].some(c=>c.ports.includes(p.id))?' bad':'');label.textContent=p.id;$('#port-labels').append(label);labels.push(label);labelPoints.push(point);
+    const label=document.createElement('span');label.className='port-label'+([...(evaluation?.collisions||[]),...(evaluation?.coincidences||[])].some(c=>c.ports.includes(p.id))?' bad':'');label.dataset.port=p.id;setLabelText(label,p);$('#port-labels').append(label);labels.push(label);labelPoints.push(point);
   }
   requestSceneRender();
 }
@@ -172,15 +184,60 @@ function focusPorts(ids){
   if(!meshGroup)return;const box=new THREE.Box3();meshGroup.children.filter(m=>ids.includes(m.userData.portId)).forEach(m=>box.expandByObject(m));if(!box.isEmpty()){const center=box.getCenter(new THREE.Vector3()),offset=camera.position.clone().sub(controls.target);controls.target.copy(center);camera.position.copy(center).add(offset);controls.update();requestSceneRender();}
 }
 
+function movePort(from,to){
+  if(to<0||to>=config.ports.length||to===from)return;
+  const [port]=config.ports.splice(from,1);config.ports.splice(to,0,port);
+  render();schedule();document.querySelector(`[data-drag="${to}"]`)?.focus();
+}
+function reassignLetter(index,letter){
+  const port=config.ports[index],previous=port.id;if(letter===previous)return;
+  // Taking another port's letter swaps the two, so identifiers stay unique.
+  const other=config.ports.find(p=>p!==port&&p.id===letter);
+  if(other)other.id=previous;port.id=letter;
+  const swap=id=>id===previous?letter:other&&id===letter?previous:id;
+  document.querySelectorAll('details[data-detail^="port-"]').forEach(d=>{d.dataset.detail='port-'+swap(d.dataset.detail.slice(5));});
+  selectedPorts=selectedPorts.map(swap);
+  render();schedule();document.querySelector(`[data-port-letter="${index}"]`)?.focus();
+  toast(other?`Ports ${letter} and ${previous} swapped letters.`:`Port ${previous} is now port ${letter}.`);
+}
+function finishDrag(){
+  const done=drag;drag=null;done.card.classList.remove('dragging');document.body.classList.remove('reordering');
+  document.querySelectorAll('.drop-before,.drop-after').forEach(card=>card.classList.remove('drop-before','drop-after'));
+  return done;
+}
+function startDrag(event){
+  const handle=event.target.closest('[data-drag]');if(!handle||drag||event.button!==0)return;
+  event.preventDefault();handle.setPointerCapture?.(event.pointerId);
+  const from=Number(handle.dataset.drag);
+  drag={from,to:from,pointerId:event.pointerId,card:handle.closest('.port-card')};
+  drag.card.classList.add('dragging');document.body.classList.add('reordering');
+}
+function moveDrag(event){
+  if(!drag||event.pointerId!==drag.pointerId)return;
+  const others=[...document.querySelectorAll('.port-card')].filter(card=>card!==drag.card);
+  drag.to=others.filter(card=>{const box=card.getBoundingClientRect();return event.clientY>box.top+box.height/2;}).length;
+  others.forEach(card=>card.classList.remove('drop-before','drop-after'));
+  if(drag.to!==drag.from)(drag.to<others.length?others[drag.to]:others.at(-1))?.classList.add(drag.to<others.length?'drop-before':'drop-after');
+  if(event.clientY<48)window.scrollBy(0,-16);else if(event.clientY>window.innerHeight-48)window.scrollBy(0,16);
+}
+function endDrag(event){
+  if(!drag||event.pointerId!==drag.pointerId)return;
+  const {from,to}=finishDrag();if(event.type==='pointerup')movePort(from,to);
+}
 function download(data,name,type){const url=URL.createObjectURL(new Blob([data],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function bindEvents(){
   document.querySelector('.editor').addEventListener('input',event=>{
     const el=event.target,path=el.dataset.path;if(!path||el.tagName==='SELECT')return;
     let value=el.type==='number'?(el.dataset.kind==='length'?canonicalLength(el.value,config.units):el.value===''?null:Number(el.value)):el.value;
-    setPath(path,value);if(path.includes('.dimensions.'))setPath(path.split('.dimensions.')[0]+'.dimensions.verified',false);schedule();
+    setPath(path,value);
+    // Notes only relabel the preview; they do not change geometry.
+    if(/^ports\.\d+\.notes$/.test(path)){const port=config.ports[Number(path.split('.')[1])];labels.forEach(l=>{if(l.dataset.port===port.id)setLabelText(l,port);});persist();return;}
+    if(path.includes('.dimensions.'))setPath(path.split('.dimensions.')[0]+'.dimensions.verified',false);schedule();
   });
   document.querySelector('.editor').addEventListener('change',event=>{
-    const el=event.target,path=el.dataset.path;if(!path||el.tagName!=='SELECT')return;
+    const el=event.target,path=el.dataset.path;
+    if(el.dataset.portLetter!=null){reassignLetter(Number(el.dataset.portLetter),el.value);return;}
+    if(!path||el.tagName!=='SELECT')return;
     setPath(path,path==='body.od'?Number(el.value):el.value);
     if(path==='body.od'||path==='body.top'||path==='body.bottom'){
       for(const side of ['top','bottom']){if(path==='body.od'||path===`body.${side}`)config.body[side+'Spec']=suggestedEnd(config.body.od,config.body[side]==='CF FXD'?'CF':'ISO-F',catalog);}
@@ -196,6 +253,13 @@ function bindEvents(){
     if(remove){config.ports.splice(Number(remove.dataset.remove),1);render();schedule();}
     if(duplicate&&config.ports.length<32){const port=structuredClone(config.ports[Number(duplicate.dataset.duplicate)]);port.id=nextPortId(config.ports);config.ports.push(port);render();schedule();toast('Port duplicated at the same position. Change its placement to clear the overlap.');}
   });
+  $('#ports').addEventListener('pointerdown',startDrag);
+  for(const type of ['pointermove','pointerup','pointercancel'])$('#ports').addEventListener(type,type==='pointermove'?moveDrag:endDrag);
+  $('#ports').addEventListener('keydown',event=>{
+    const handle=event.target.closest('[data-drag]');
+    if(handle&&(event.key==='ArrowUp'||event.key==='ArrowDown')){event.preventDefault();const from=Number(handle.dataset.drag);movePort(from,from+(event.key==='ArrowUp'?-1:1));}
+  });
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&drag)finishDrag();});
   $('#collision-list').addEventListener('click',e=>{const b=e.target.closest('[data-focus]');if(b)focusPorts(b.dataset.focus.split('|'));});
   $('#fit').onclick=()=>fitView();$('#view-iso').onclick=()=>fitView();$('#view-top').onclick=()=>fitView('top');$('#view-front').onclick=()=>fitView('front');
   $('#transparent').onchange=()=>{if(evaluation)updateMeshes(evaluation.meshes||[]);};

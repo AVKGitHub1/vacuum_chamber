@@ -128,6 +128,39 @@ test('reload startup restores the checked-in chamber after edits',async()=>{
   assert.deepEqual(JSON.parse(localStorage.getItem('chamber-studio-v1')),startup);
   assert.equal(doc.querySelectorAll('.port-card').length,4);
 });
+test('port letters can be reassigned or swapped, and the keyboard reorders ports with their letters',async()=>{
+  const saved=()=>JSON.parse(localStorage.getItem('chamber-studio-v1')).ports;
+  const letter=doc.querySelector('[data-port-letter="1"]');
+  assert.equal(letter.value,'B');
+  assert.equal(letter.querySelector('option[value="A"]').textContent,'A (swap)');
+  assert.equal(letter.querySelector('option[value="E"]').textContent,'E');
+  change('[data-port-letter="1"]','E');
+  assert.deepEqual(saved().map(p=>p.id),['A','E','C','D']);
+  assert.match(doc.querySelectorAll('.port-card')[1].textContent,/Port E/);
+  change('[data-port-letter="1"]','A');
+  assert.deepEqual(saved().map(p=>p.id),['E','A','C','D']);
+  assert.match(doc.querySelector('#toast').textContent,/Ports A and E swapped letters/);
+  await waitFor(()=>doc.querySelector('#compute-state').textContent==='Up to date');
+  const flanges=saved().map(p=>p.flange);
+  const key=(index,name)=>doc.querySelector(`[data-drag="${index}"]`).dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:name,bubbles:true}));
+  key(0,'ArrowDown');
+  assert.deepEqual(saved().map(p=>p.id),['A','E','C','D']);
+  assert.deepEqual(saved().map(p=>p.flange),[flanges[1],flanges[0],flanges[2],flanges[3]]);
+  assert.equal(doc.activeElement,doc.querySelector('[data-drag="1"]'));
+  key(0,'ArrowUp');
+  assert.deepEqual(saved().map(p=>p.id),['A','E','C','D']);
+  await waitFor(()=>doc.querySelector('#compute-state').textContent==='Up to date');
+  assert.equal(doc.querySelector('#export').disabled,false);
+});
+test('port notes are saved without recomputing geometry',async()=>{
+  change('[data-path="ports.0.notes"]','Turbo pump');
+  assert.equal(doc.querySelector('#compute-state').textContent,'Up to date');
+  assert.equal(doc.querySelector('#export').disabled,false);
+  assert.equal(JSON.parse(localStorage.getItem('chamber-studio-v1')).ports[0].notes,'Turbo pump');
+  doc.querySelector('#reset').click();
+  await waitFor(()=>JSON.parse(localStorage.getItem('chamber-studio-v1')).ports[0].flange==='ISO100F'&&doc.querySelector('#compute-state').textContent==='Up to date');
+  assert.deepEqual(JSON.parse(localStorage.getItem('chamber-studio-v1')),startup);
+});
 test('ISO-F ends on the 10 in body use the ISO250F profile',async()=>{
   assert.equal(doc.querySelector('[data-path="body.od"] option[value="254"]').textContent,'10 in');
   change('[data-path="body.top"]','ISO-F');change('[data-path="body.bottom"]','ISO-F');change('[data-path="body.od"]',254);
